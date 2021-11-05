@@ -4,7 +4,8 @@ Created on 2021/11/05
 @author: Sin Shimozono
 '''
 
-class GenerativeGrammer():
+class Grammer():
+    # class for representing generative grammer
     def __init__(self, nonterminals,terminals,rules,start):
         self.nonterminals = set(nonterminals)
         self.terminals = set(terminals)
@@ -26,14 +27,14 @@ class GenerativeGrammer():
         self.startsym = start
 
     def __repr__(self):
-        tmp = 'GenerativeGrammer({},{},{},{})'.format(self.nonterminals,self.terminals,self.prodrules,self.startsym)
+        tmp = 'Grammer({},{},{},{})'.format(self.nonterminals,self.terminals,self.prodrules,self.startsym)
         return tmp
 
     def __str__(self):
         rulesstr = '{'
         rulesstr += ', '.join([str(key)+'->'+str(val) for key in self.prodrules for val in self.prodrules[key]])
         rulesstr += '}'
-        tmp = 'GenerativeGrammer({}, {}, {}, {})'.format(self.nonterminals,self.terminals,rulesstr,self.startsym)
+        tmp = 'Grammer({}, {}, {}, {})'.format(self.nonterminals,self.terminals,rulesstr,self.startsym)
         return tmp
     
     def generate(self, limit=10):
@@ -60,6 +61,6 @@ class GenerativeGrammer():
 
 if __name__ == '__main__':
     import sys
-    g = GenerativeGrammer(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4])
+    g = Grammer(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4])
     print('G='+str(g))
     print("result = "+str(g.generate(int(sys.argv[5]))))
