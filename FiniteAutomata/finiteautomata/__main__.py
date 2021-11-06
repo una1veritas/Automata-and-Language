@@ -48,23 +48,49 @@ class FiniteAutomata:
         t += ')'
         return t
 
-    def trans(self,state,symbol):
+    def searchtuple(self, singlestate, symbol):
         left = 0
         right = len(self.transition)
-        while right - left > 0 :
-            ix = left + (right - left)>>1
-            #print(left,right,ix)
+        counter = 0
+        while right != left :
+            ix = left + ((right - left)>>1)
+            print(left,right,ix)
             t = self.transition[ix]
-            if (state, symbol) < t[:2] :
+            if t[:2] >= (state, symbol) :
                 right = ix
-            elif (state, symbol) > t[:2] :
+            elif t[:2] < (state, symbol) :
                 left = ix + 1
-            else:
-                return t[2]
-        return None
+            # if counter > 10:
+            #     break
+            # else:
+            #     counter += 1
+        if (state, symbol) == self.transition[left][:2] :
+            collection = set()
+            for i in range(left,len(self.transition)):
+                collection.add(self.transition[i][2])
+        return collection
             
+    def transfer(self,state,symbol):
+        if not isinstance(state,set) :
+            state = set([state])
+            if len(collection) == 1 :
+                return collection.pop()
+            elif len(collection) > 1 :
+                return collection
+        return None
+    
+    def run(self,inputstr):
+        self.reset()
+        print('{}'.format(self.currentstate),end='')
+        for symb in inputstr:
+            if isinstance(self.currentstate,set):
+                
+            else:
+                self.currentstate = self.transfer(self.currentstate, symb)
+                print(' -{}-> {} '.format(symb, self.currentstate),end='')
+        return self.currentstate in self.finals
         
 if __name__ == '__main__':
-    fa = FiniteAutomata('01', 'ab', [('0','a','0'), ('0','b','1'),('1','a','0'),('1','b','1')],'0','1')
+    fa = FiniteAutomata('01', 'ab', [('0','a','0'),('0','a','1'),('0','a','2'),('0','b','1'),('0','b','2'),('1','a','0'),('1','a','1'),('1','a','2'),('1','b','0'),('1','b','1')],'0','1')
     print(fa)
-    print(fa.trans('0', 'c'))
+    print(fa.run('aabab'))
