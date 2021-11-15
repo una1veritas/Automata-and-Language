@@ -5,23 +5,34 @@ Created on 2021/11/05
 '''
 
 class Grammer():
-    # class for representing generative grammer
+    # class for representing generative formal grammer
     def __init__(self, nonterminals,terminals,rules,start):
         self.nonterminals = set(nonterminals)
         self.terminals = set(terminals)
         self.prodrules = dict()
         if isinstance(rules,str):
-            rules = eval(rules)
+            try:
+                rules = eval(rules)
+            except SyntaxError:
+                ruledict = dict()
+                for each in rules.split(','):
+                    lhs, rhs = each.split('->')
+                    if lhs not in ruledict:
+                        ruledict[lhs] = list()
+                    ruledict[lhs].append(rhs)
+                rules = ruledict
+        print(rules)
+        print()
         if isinstance(rules,(list,tuple)) and all([isinstance(elem,(list,tuple)) for elem in rules]):
             for src, dst in rules:
                 if src in self.terminals and src not in self.nonterminals: continue
                 if src not in self.prodrules:
                     self.prodrules[src] = set()
                 self.prodrules[src].add(dst)
-        elif isinstance(rules,dict) and all([isinstance(val,(set,list,tuple)) for key, val in rules]):
-            for k, v in rules:
+        elif isinstance(rules,dict) and all([isinstance(val,(set,list,tuple)) for key, val in rules.items()]):
+            for k in rules:
                 if k in self.terminals and k not in self.nonterminals : continue
-                self.prodrules[k] = set(v)        
+                self.prodrules[k] = set(rules[k])        
         else:
             raise TypeError('illegal type for production rules.')
         self.startsym = start
@@ -58,9 +69,36 @@ class Grammer():
             #print(expanded)
             derived.extend(expanded)
         return result
+    
+    def ischomskynormalform(self):
+        for lhs in self.prodrules:
+            for rhs in self.prodrules[lhs]:
+                if len(rhs) == 2 and all([sym in self.nonterminals for sym in rhs]) :
+                    continue
+                if len(rhs) == 1 and rhs in self.terminals :
+                    continue
+                return False
+        return True
 
+    def isregular(self):
+        for lhs in self.prodrules:
+            for rhs in self.prodrules[lhs]:
+                if len(rhs) == 0 :
+                    continue
+                if len(rhs) == 1 and rhs in self.terminals :
+                    continue
+                if len(rhs) == 2 and rhs[0] in self.terminals and rhs[1] in self.nonterminals :
+                    continue
+                return False
+        return True       
+    
 if __name__ == '__main__':
     import sys
     g = Grammer(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4])
     print('G='+str(g))
-    print("result = "+str(g.generate(int(sys.argv[5]))))
+    lim = 7
+    if len(sys.argv) == 6 :
+        lim = int(sys.argv[5])
+    print("result = "+str(g.generate(lim)))
+    print(g.ischomskynormalform())
+    print(g.isregular())
