@@ -51,12 +51,17 @@ class Grammer():
     def generate(self, limit=10):
         derived = list()
         derived.append(self.startsym)
-        result = list()
+        done = set()
+        result = set()
         while len(derived):
             print(derived, result)
             t = derived.pop(0)
+            if t in done:
+                continue
+            else:
+                done.add(t)
             if all([ea in self.terminals for ea in t]) or not len(t) <= limit :
-                result.append(t)
+                result.add(t)
                 continue
             expanded = list()
             for i in range(len(t)):
@@ -70,12 +75,43 @@ class Grammer():
             derived.extend(expanded)
         return result
     
-    def ischomskynormalform(self):
+    def isChomsky(self):
+        allrhss = set()
+        for lhs in self.prodrules:
+            allrhss.union(self.prodrules[lhs])
+        hasnostart = True
+        for rhs in allrhss : 
+            for s in rhs:
+                hasnostart &= s != self.startsym 
+        if hasnostart :
+            for lhs in self.prodrules:
+                for rhs in self.prodrules[lhs]:
+                    if len(rhs) == 2 and all([sym in self.nonterminals for sym in rhs]) :
+                        continue
+                    if len(rhs) == 1 and rhs in self.terminals :
+                        continue
+                    if len(rhs) == 0 and lhs == self.startsym :
+                        continue
+                    return False
+        else:
+            # Chomsky reduced form
+            for lhs in self.prodrules:
+                for rhs in self.prodrules[lhs]:
+                    if len(rhs) == 2 and all([sym in self.nonterminals for sym in rhs]) :
+                        continue
+                    if len(rhs) == 1 and rhs in self.terminals :
+                        continue
+                    return False
+        return True
+
+    def isGreibach(self):
         for lhs in self.prodrules:
             for rhs in self.prodrules[lhs]:
-                if len(rhs) == 2 and all([sym in self.nonterminals for sym in rhs]) :
+                if len(rhs) == 0 :
                     continue
                 if len(rhs) == 1 and rhs in self.terminals :
+                    continue
+                if rhs[0] in self.terminals and all([sym in self.nonterminals for sym in rhs[1:] ]) :
                     continue
                 return False
         return True
@@ -90,15 +126,33 @@ class Grammer():
                 if len(rhs) == 2 and rhs[0] in self.terminals and rhs[1] in self.nonterminals :
                     continue
                 return False
+        return True
+       
+    def isleftregular(self):
+        for lhs in self.prodrules:
+            for rhs in self.prodrules[lhs]:
+                if len(rhs) == 0 :
+                    continue
+                if len(rhs) == 1 and rhs in self.terminals :
+                    continue
+                if len(rhs) == 2 and rhs[0] in self.nonterminals and rhs[0] in self.terminals :
+                    continue
+                return False
         return True       
-    
+  
 if __name__ == '__main__':
     import sys
-    g = Grammer(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4])
+    #g = Grammer(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4])
+    g = Grammer("SAB","abc","S->aS,S->bA,S->bB,A->,A->cA,B->bA","S")
+    #g = Grammer("SAB","ab","S->AB,S->BA,S->SS,A->a,B->b","S")
+    #g = Grammer("SA","ab","S->A,A->AA,A->AaAb,A->aAbA,A->","S")
+    #g = Grammer("SAB","abc","S->aS,S->bA,A->,A->cA","S")
     print('G='+str(g))
-    lim = 7
-    if len(sys.argv) == 6 :
-        lim = int(sys.argv[5])
-    print("result = "+str(g.generate(lim)))
-    print(g.ischomskynormalform())
+    lim = 5
+    # if len(sys.argv) == 6 :
+    #     lim = int(sys.argv[5])
+    print("result = "+str(sorted(g.generate(lim),key = lambda e: (len(e),e) )))
+    print(g.isChomsky())
+    print(g.isGreibach())
     print(g.isregular())
+    print(g.isleftregular())
