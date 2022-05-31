@@ -1,0 +1,23 @@
+log.txt
+ Created on: 2017/02/14
+     Author: sin
+
+Raspberry Pi 2 B
+
+$./aho-dawg.exe word_list2.txt 50000
+
+...
+
+How many keywords would you like to add?
+50000
+total time: 5.74302sec.
+time1: 0.518758sec.
+time2: 1.05074sec.
+time3: 0.454689sec.
+time4: 0.674493sec.
+time5: 2.28517sec.
+out size 100605
+
+string size 0
+How many keywords would you like to add?
+
