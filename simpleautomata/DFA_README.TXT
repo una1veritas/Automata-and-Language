@@ -17,7 +17,7 @@ dfa.c  dfa.exe
 (1) 引数なしで実行すると、ヘルプの見方とともに、サンプルの定義（{a, b} 上の文字列で
 文字 a の個数が偶数を受理）で動作する。
 $ ./dfa.exe
-define M by buily-in example: "0a1,0b0,1a0,1b1" "0" "0"
+define M by built-in example: "0a1,0b0,1a0,1b1" "0" "0"
 (Use 'command -h' to get a help message.)
 
 dfa(
