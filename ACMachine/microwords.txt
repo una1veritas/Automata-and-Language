@@ -1,6 +1,0 @@
-bone
-hourglass
-vase
-crown
-bird
-hole
