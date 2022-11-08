@@ -3,7 +3,7 @@ TARGET = all
 CC = gcc -Wall 
 CXX = g++ -std=c++17 -Wall 
 
-CFLAGS += -O0 -g
+CFLAGS += -O2 
 
 DFAOBJS = dfa.o
 NFAOBJS = nfa.o
