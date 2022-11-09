@@ -1,3 +1,0 @@
-This is a short text file for some small test.
-For example, doing a grep search by regular expressions to this file, is expected.
-
