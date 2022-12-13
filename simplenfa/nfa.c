@@ -213,7 +213,7 @@ int command_arguments(int argc, char * argv[], char ** delta, char * initial, ch
 	if (argc > 1) {
 		if (strcmp(argv[1], "-h") == 0 ) {
 			printf("usage: command \"transition triples\" \"initial state\" \"final states\" (\"input string\")\n");
-			printf("example: dfa.exe \"%s\" \"%c\" \"%s\"\n\n", *delta, *initial, *finals);
+			printf("example: nfa.exe \"%s\" \"%c\" \"%s\"\n\n", *delta, *initial, *finals);
 			return 1;
 		} else if (argc == 4 || argc == 5 ) {
 			*delta = argv[1]; *initial = argv[2][0]; *finals = argv[3];

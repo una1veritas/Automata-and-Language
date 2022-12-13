@@ -8,7 +8,7 @@ CFLAGS += -O2
 DFAOBJS = dfa.o
 NFAOBJS = nfa.o
 
-EXECUTABLE = dfa.exe nfa.exe
+EXECUTABLE = nfa.exe
 
 all:	$(EXECUTABLE)
 
