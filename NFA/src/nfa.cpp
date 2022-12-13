@@ -35,6 +35,9 @@ public:
 
 	bitset64 & operator=(const uint64 & intval) { bits = intval; return *this; }
 
+	explicit operator bool() const { return bits != 0; }
+	explicit operator uint64() const { return bits; }
+
 	bool operator[](const uint & i) const { return (bits>>i) & 1; }
 	bitset64 & set(const uint & i) { bits |= 1LL<<i; return *this; }
 	bitset64 & clear(const uint & i) { bits &= ~(1LL<<i); return *this; }
@@ -44,8 +47,8 @@ public:
 	bool operator!=(const uint64 & intval) const { return bits != intval; }
 
 	bitset64 & operator|=(const uint64 & intval) { bits |= intval; return *this; }
+	bitset64 & operator|=(const bitset64 & b) { bits |= b.bits; return *this; }
 
-	explicit operator uint64() const { return bits; }
 	bitset64 operator&(const bitset64 & b) const { return bitset64(bits & b.bits); }
 
 	friend ostream & operator<<(ostream & out, const bitset64 & bset) {
@@ -93,7 +96,11 @@ private:
 
 	/* 定義文字列から nfa を初期化 */
 public:
-	void define(string &transdef, string &initialstate, string &finalstates) {
+	NFA(const string &transdef, const string &initialstate, const string &finalstates) {
+		define(transdef, initialstate, finalstates);
+	}
+
+	void define(const string &transdef, const string &initialstate, const string &finalstates) {
 		//char triplex[72];
 		//char buf[72];
 		//char * ptr = trans;
@@ -109,9 +116,9 @@ public:
 		istringstream stream(transdef);
 		/* 定義の三つ組みを読み取る */
 		string item;
-		string delim = ",";
+		char delim = ',';
 		vector<string> items;
-		while (std::getline(stream, item, delim)) {
+		while ( getline(stream, item, delim)) {
 			items.push_back(item);
 		}
 		for (const auto & item : items) {
@@ -121,9 +128,9 @@ public:
 				delta[stat][symb] |= 1LL << std::stol(item.substr(i,1));
 			}
 		}
-		initial.set(std::stol(initialstate)); /* 初期状態は１つ */
-		for (uint i = 0; i < finals.length(); ++i) {
-			finals.set(std::stol(finals.substr(i,1)));
+		initial = std::stol(initialstate); /* 初期状態は１つ */
+		for (uint i = 0; i < finalstates.length(); ++i) {
+			finals.set(std::stol(finalstates.substr(i,1)));
 		}
 	}
 
@@ -134,9 +141,9 @@ public:
 	bitset64& transfer(char a) {
 		bitset64 next = 0;
 		for (uint i = 0; i < bitset64::limit; ++i) {
-			if (current[i]) {
-				if (delta[i][(int) a] != 0) /* defined */
-					next |= mp->delta[i][(int) a];
+			if ( current[i] ) {
+				if ( !bool(delta[i][uint(a)]) ) /* defined */
+					next |= delta[i][uint(a)];
 				//else /* if omitted, go to and self-loop in the ghost state. */
 			}
 		}
@@ -148,128 +155,115 @@ public:
 	}
 
 	friend ostream& operator<<(ostream &out, const NFA & nfa) {
-		bset64 states;
+		bitset64 states;
 		set<char> alphabet;
-		char buf[160];
 
 		states = 0;
-		for (int a = 0; a < ALPHABET_LIMIT; ++a) {
-			alphabet[a] = 0;
-		}
-		for (int i = 0; i < STATE_LIMIT; ++i) {
-			for (int a = 0; a < ALPHABET_LIMIT; ++a) {
-				if (mp->delta[i][a]) {
-					states |= 1 << i;
-					states |= (int) mp->delta[i][a];
-					alphabet[a] = 1;
+		for (uint i = 0; i < bitset64::limit; ++i) {
+			for (uint a = 0; a < ALPHABET_LIMIT; ++a) {
+				if ( bool(nfa.delta[i][a]) ) {
+					states |= (1LL << i);
+					states |= uint64(nfa.delta[i][a]);
+					alphabet.insert(char(a));
 				}
 			}
 		}
-		printf("nfa(\n");
-		printf("states = %s\n", bset64_str(states, buf));
-		printf("alphabet = {");
+		out << "nfa(" << endl;
+		out << "states = " << states << endl;
+		out << "alphabet = {";
 		int the1st = 1;
-		for (int i = 0; i < ALPHABET_LIMIT; ++i) {
-			if (alphabet[i]) {
+		for (uint i = 0; i < ALPHABET_LIMIT; ++i) {
+			if (alphabet.contains(char(i))) {
 				if (!the1st) {
-					printf(", ");
+					out << ", ";
 				}
-				printf("%c", (char) i);
+				out << char(i);
 				the1st = 0;
 			}
 		}
-		printf("},\n");
+		out << "}," << endl;
 
-		printf("delta = \n");
-		printf("state symbol| next\n");
-		printf("------------+------\n");
-		for (int i = 0; i < STATE_LIMIT; ++i) {
-			for (int a = 0; a < ALPHABET_LIMIT; ++a) {
-				if (mp->delta[i][a]) {
-					printf("  %c  ,  %c   | %s \n", state2char(i), a,
-							bset64_str(mp->delta[i][a], buf));
+		out << "delta = " << endl;
+		out << "state symbol| next" << endl;
+		out << "------------+------" << endl;
+		for (uint i = 0; i < bitset64::limit; ++i) {
+			for (uint a = 0; a < ALPHABET_LIMIT; ++a) {
+				if ( bool(nfa.delta[i][a]) ) {
+					out << "  " << i << "  ,  "<< char(a) << "   | " << nfa.delta[i][a] << endl;
 				}
 			}
 		}
-		printf("------------+------\n");
-		printf("initial state = %x\n", mp->initial);
-		printf("accepting states = %s\n", bset64_str(mp->finals, buf));
-		printf(")\n");
-		fflush(stdout);
+		out << "------------+------" << endl;
+		out << "initial state = " << nfa.initial << endl;
+		out << "accepting states = " << nfa.finals << endl;
+		out << ")" << endl;
+		return out;
 	}
 
-	int run(char *inputstr) {
-		char *ptr = inputstr;
-		char buf[128];
-		printf("run on '%s' :\n", ptr);
-		nfa_reset(mp);
-		printf("     -> %s", bset64_str(mp->current, buf));
-		for (; *ptr; ++ptr) {
-			nfa_transfer(mp, *ptr);
-			printf(", -%c-> %s", *ptr, bset64_str(mp->current, buf));
+	int run(const string & inputstr) {
+		uint pos;
+		cout << "run on '<< inputstr << ' :" << endl;
+		reset();
+		cout << "     -> " << current;
+		for (pos = 0; pos < inputstr.length(); ++pos) {
+			transfer(inputstr[pos]);
+			cout << ", -" << inputstr[pos] << "-> " << current;
 		}
-		if (nfa_accepting(mp)) {
-			printf(", \naccepted.\n");
-			fflush(stdout);
+		if (accepting()) {
+			cout << ", " << endl << "accepted." << endl;
 			return STATE_IS_FINAL;
 		} else {
-			printf(", \nrejected.\n");
-			fflush(stdout);
+			cout << ", "<< endl << "rejected." << endl;
 			return STATE_IS_NOT_FINAL;
 		}
 	}
 };
 
-int command_arguments(int , char ** , char ** , char * , char ** , char *);
+int command_arguments(const int , const char ** , string &, string &, string &, string &);
 
-int main(int argc, char **argv) {
-	char * delta = "0a01,0b0,0c0,1a0,1b02,1c0,2a0,2b03,2c0,3a3,3b3,3c3", initial = '0', *finals = "3";
-	char input_buff[1024] = "acabaccababbacbbac";
-	if ( command_arguments(argc, argv, &delta, &initial, &finals, input_buff) )
+int main(const int argc, const char **argv) {
+	string delta = "0a01,0b0,0c0,1a0,1b02,1c0,2a0,2b03,2c0,3a3,3b3,3c3", initial = "0", finals = "3";
+	string input_buff = "acabaccababbacbbac";
+	if ( command_arguments(argc, argv, delta, initial, finals, input_buff) )
 		return 1;
 
-	nfa M;
+	NFA M(delta, initial, finals);
 	//printf("M is using %0.2f Kbytes.\n\n", (double)(sizeof(M)/1024) );
-	nfa_define(&M, delta, initial, finals);
-	nfa_print(&M);
-	if (strlen(input_buff))
-		nfa_run(&M, input_buff);
+	cout << M << endl;
+	if ( input_buff.length() )
+		M.run(input_buff);
 	else {
-		printf("Type an input as a line, or quit by the empty line.\n");
-		fflush(stdout);
+		cout << "Type an input as a line, or quit by the empty line." << endl;
 		/* 標準入力から一行ずつ，入力文字列として走らせる */
-		while( fgets(input_buff, 1023, stdin) ) {
-			char * p;
-			for(p = input_buff; *p != '\n' && *p != '\r' && *p != 0; ++p) ;
-			*p = '\0'; /* 行末の改行は消す */
-			if (!strlen(input_buff))
+		while( std::getline(cin, input_buff, '\n') ) {
+			if (! input_buff.length() )
 				break;
-			nfa_run(&M, input_buff);
+			M.run(input_buff);
 		}
 	}
 	printf("bye.\n");
 	return 0;
 }
 
-int command_arguments(int argc, char * argv[], char ** delta, char * initial, char ** finals, char * input) {
+int command_arguments(const int argc, const char * argv[], string & delta, string & initial, string & finals, string & input) {
 	if (argc > 1) {
-		if (strcmp(argv[1], "-h") == 0 ) {
-			printf("usage: command \"transition triples\" \"initial state\" \"final states\" (\"input string\")\n");
-			printf("example: dfa.exe \"%s\" \"%c\" \"%s\"\n\n", *delta, *initial, *finals);
+		if ((string)argv[1] == (string)"-h") {
+			cout << "usage: command \"transition triples\" \"initial state\" \"final states\" (\"input string\")" << endl;
+			cout << "example: dfa.exe \"" << delta << "\" \"" << initial <<  "\" \"" << finals << "\"" << endl << endl;
 			return 1;
 		} else if (argc == 4 || argc == 5 ) {
-			*delta = argv[1]; *initial = argv[2][0]; *finals = argv[3];
+			delta = argv[1]; initial = argv[2][0]; finals = argv[3];
 			if (argc == 5 )
-				strcpy(input, argv[4]);
+				input = argv[4];
 			else
-				input[0] = '\0';
+				input = "";
 		} else {
-			printf("Illegal number of arguments.\n");
+			cout << "Illegal number of arguments." << endl;
 			return 1;
 		}
 	} else {
-		printf("define M by built-in example: \"%s\" \"%c\" \"%s\"\n", *delta, *initial, *finals);
-		printf("(Use 'command -h' to get a help message.)\n\n");
+		cout << "define M by built-in example: dfa.exe \"" << delta << "\" \"" << initial <<  "\" \"" << finals << "\"" << endl << endl;
+		cout << "(Use 'command -h' to get a help message.)" << endl << endl;
 	}
 	return 0;
 }
