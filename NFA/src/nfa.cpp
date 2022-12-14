@@ -48,8 +48,12 @@ public:
 
 	bitset64 & operator|=(const uint64 & intval) { bits |= intval; return *this; }
 	bitset64 & operator|=(const bitset64 & b) { bits |= b.bits; return *this; }
+	bitset64 & operator&=(const uint64 & intval) { bits &= intval; return *this; }
+	bitset64 & operator&=(const bitset64 & b) { bits &= b.bits; return *this; }
 
+	bitset64 operator~() { return bitset64(~bits); }
 	bitset64 operator&(const bitset64 & b) const { return bitset64(bits & b.bits); }
+	bitset64 operator|(const bitset64 & b) const { return bitset64(bits | b.bits); }
 
 	friend ostream & operator<<(ostream & out, const bitset64 & bset) {
 		out << "{";
@@ -98,6 +102,7 @@ private:
 public:
 	NFA(const string &transdef, const string &initialstate, const string &finalstates) {
 		define(transdef, initialstate, finalstates);
+		reset();
 	}
 
 	void define(const string &transdef, const string &initialstate, const string &finalstates) {
@@ -135,14 +140,14 @@ public:
 	}
 
 	void reset() {
-		current = 1LL << initial;
+		current.set(initial);
 	}
 
 	bitset64& transfer(char a) {
 		bitset64 next = 0;
 		for (uint i = 0; i < bitset64::limit; ++i) {
 			if ( current[i] ) {
-				if ( !bool(delta[i][uint(a)]) ) /* defined */
+				if ( bool(delta[i][uint(a)]) ) /* defined */
 					next |= delta[i][uint(a)];
 				//else /* if omitted, go to and self-loop in the ghost state. */
 			}
@@ -151,7 +156,7 @@ public:
 	}
 
 	bool accepting() {
-		return (finals & current) == 0;
+		return (finals & current) != 0;
 	}
 
 	friend ostream& operator<<(ostream &out, const NFA & nfa) {
@@ -202,14 +207,18 @@ public:
 
 	int run(const string & inputstr) {
 		uint pos;
-		cout << "run on '<< inputstr << ' :" << endl;
+		cout << "run on '" << inputstr << "' :" << endl;
 		reset();
 		cout << "     -> " << current;
 		for (pos = 0; pos < inputstr.length(); ++pos) {
+			if (! bool(current) ) {
+				cout << "hidden state, stopped" << endl;
+				break;
+			}
 			transfer(inputstr[pos]);
 			cout << ", -" << inputstr[pos] << "-> " << current;
 		}
-		if (accepting()) {
+		if ( accepting() ) {
 			cout << ", " << endl << "accepted." << endl;
 			return STATE_IS_FINAL;
 		} else {
