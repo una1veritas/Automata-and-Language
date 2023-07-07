@@ -13,35 +13,38 @@ class FormalGrammer():
             rules = eval(rules)
         if isinstance(rules,(list,tuple)) and all([isinstance(elem,(list,tuple)) for elem in rules]):
             for src, dst in rules:
-                if src in self.terminals and src not in self.nonterminals: continue
+                if src in self.terminals and src not in self.nonterminals: 
+                    continue
                 if src not in self.prodrules:
-                    self.prodrules[src] = set()
-                self.prodrules[src].add(dst)
-        elif isinstance(rules,dict) and all([isinstance(val,(set,list,tuple)) for key, val in rules]):
-            for k, v in rules:
-                if k in self.terminals and k not in self.nonterminals : continue
+                    self.prodrules[src] = set([dst])
+                else:
+                    self.prodrules[src].add(dst)
+        elif isinstance(rules,dict) and all([isinstance(val,(set,list,tuple)) for key, val in rules.items()]):
+            for k, v in rules.items():
+                if k in self.terminals and k not in self.nonterminals : 
+                    continue
                 self.prodrules[k] = set(v)        
         else:
             raise TypeError('illegal type for production rules.')
-        self.startsym = start
+        self.start = start
 
     def __repr__(self):
-        tmp = 'FormalGrammer({},{},{},{})'.format(self.nonterminals,self.terminals,self.prodrules,self.startsym)
+        tmp = 'FormalGrammer({},{},{},{})'.format(self.nonterminals,self.terminals,self.prodrules,self.start)
         return tmp
 
     def __str__(self):
         rulesstr = '{'
         rulesstr += ', '.join([str(key)+'->'+str(val) for key in self.prodrules for val in self.prodrules[key]])
         rulesstr += '}'
-        tmp = 'FormalGrammer({}, {}, {}, {})'.format(self.nonterminals,self.terminals,rulesstr,self.startsym)
+        tmp = 'FormalGrammer({}, {}, {}, {})'.format(self.nonterminals,self.terminals,rulesstr,self.start)
         return tmp
     
     def generate(self, limit=10):
         derived = list()
-        derived.append(self.startsym)
+        derived.append(self.start)
         result = list()
         while len(derived):
-            print(derived, result)
+            #print(derived, result)
             t = derived.pop(0)
             if all([ea in self.terminals for ea in t]) or not len(t) <= limit :
                 result.append(t)
