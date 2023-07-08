@@ -59,7 +59,7 @@ class FormalGrammer():
                             expanded.append(r)
             #print(expanded)
             derived.extend(expanded)
-        return result
+        return sorted(list(set(result)))
 
 if __name__ == '__main__':
     import sys
