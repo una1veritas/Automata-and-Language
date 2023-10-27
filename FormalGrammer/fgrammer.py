@@ -57,7 +57,7 @@ class FormalGrammer():
                         r = t[:i]+each+t[i+1:]
                         if len(r) <= limit :
                             expanded.append(r)
-            #print(expanded)
+            print(expanded)
             derived.extend(expanded)
         result = list(set(result))
         result = sorted(result)
