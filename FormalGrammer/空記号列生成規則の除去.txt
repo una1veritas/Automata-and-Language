@@ -1,0 +1,6 @@
+G=(N,T,P,S) 注の空記号列生成規則を除去するアルゴリズム
+
+空記号列生成規則の集合(P)：
+    return { (X -> epsilon) in P | X is not equal to S}
+
+a. While R_E = 空記号列生成規則の集合(P) is not empty do:
