@@ -11,19 +11,31 @@ class FormalGrammer():
         self.prodrules = dict()
         if isinstance(rules,str):
             rules = eval(rules)
-        if isinstance(rules,(list,tuple)) and all([isinstance(elem,(list,tuple)) for elem in rules]):
-            for src, dst in rules:
-                if src in self.terminals and src not in self.nonterminals: 
+        # if isinstance(rules,(list,tuple)) and all([isinstance(elem,(list,tuple)) for elem in rules]):
+        #     for src, dst in rules:
+        #         if src in self.terminals and src not in self.nonterminals: 
+        #             continue
+        #         if src not in self.prodrules:
+        #             self.prodrules[src] = set([dst])
+        #         else:
+        #             self.prodrules[src].add(dst)
+        if isinstance(rules,dict) :
+            print("rules = ", rules)
+            for k in rules:
+                rhs = rules[k]
+                if k in self.terminals and k not in self.nonterminals :
+                    print('error')
                     continue
-                if src not in self.prodrules:
-                    self.prodrules[src] = set([dst])
+                if k not in self.prodrules :
+                    self.prodrules[k] = set() 
                 else:
-                    self.prodrules[src].add(dst)
-        elif isinstance(rules,dict) and all([isinstance(val,(set,list,tuple)) for key, val in rules.items()]):
-            for k, v in rules.items():
-                if k in self.terminals and k not in self.nonterminals : 
-                    continue
-                self.prodrules[k] = set(v)        
+                    print(k, rhs)
+                if isinstance(rhs, (list,tuple,set)) :
+                    for e in rules[k]:
+                        self.prodrules[k].add(e)
+                else:
+                    self.prodrules[k].add(rhs)
+            print(self.prodrules)
         else:
             raise TypeError('illegal type for production rules.')
         self.start = start
@@ -59,7 +71,7 @@ class FormalGrammer():
                             expanded.append(r)
             #print(expanded)
             derived.extend(expanded)
-        return result
+        return set(result)
 
 if __name__ == '__main__':
     import sys
