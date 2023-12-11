@@ -126,4 +126,5 @@
 			<resource resourceType="PROJECT" workspacePath="/StringSearchNFA"/>
 		</configuration>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cproject>

@@ -13,10 +13,10 @@ EXECUTABLE = nfa.exe
 all:	$(EXECUTABLE)
 
 dfa.exe:	$(DFAOBJS)
-	$(CXX) -o $@ $^
+	$(CC) -o $@ $^
 
 nfa.exe:	$(NFAOBJS)
-	$(CXX) -o $@ $^
+	$(CC) -o $@ $^
 
 %.o:	%.cpp 
 	$(CXX) -c $(CFLAGS) $(CXXFLAGS) $(CPPFLAGS) -o $@ $<

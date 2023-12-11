@@ -10,32 +10,15 @@ class FormalGrammer():
         self.terminals = set(terminals)
         self.prodrules = dict()
         if isinstance(rules,str):
-            rules = eval(rules)
-        # if isinstance(rules,(list,tuple)) and all([isinstance(elem,(list,tuple)) for elem in rules]):
-        #     for src, dst in rules:
-        #         if src in self.terminals and src not in self.nonterminals: 
-        #             continue
-        #         if src not in self.prodrules:
-        #             self.prodrules[src] = set([dst])
-        #         else:
-        #             self.prodrules[src].add(dst)
-        if isinstance(rules,dict) :
-            print("rules = ", rules)
-            for k in rules:
-                rhs = rules[k]
-                if k in self.terminals and k not in self.nonterminals :
-                    print('error')
-                    continue
-                if k not in self.prodrules :
-                    self.prodrules[k] = set() 
-                else:
-                    print(k, rhs)
-                if isinstance(rhs, (list,tuple,set)) :
-                    for e in rules[k]:
-                        self.prodrules[k].add(e)
-                else:
-                    self.prodrules[k].add(rhs)
-            print(self.prodrules)
+            for each in rules.split(',') :
+                (lhs, rhs) = each.strip().split('->')
+                lhs = lhs.strip()
+                rhs = rhs.strip().split('|')
+                if lhs not in self.prodrules :
+                    self.prodrules[lhs] = set()
+                for e in rhs:
+                    self.prodrules[lhs].add(e)
+            #print(self.prodrules)
         else:
             raise TypeError('illegal type for production rules.')
         self.start = start
@@ -45,10 +28,15 @@ class FormalGrammer():
         return tmp
 
     def __str__(self):
-        rulesstr = '{'
-        rulesstr += ', '.join([str(key)+'->'+str(val) for key in self.prodrules for val in self.prodrules[key]])
-        rulesstr += '}'
-        tmp = 'FormalGrammer({}, {}, {}, {})'.format(self.nonterminals,self.terminals,rulesstr,self.start)
+        rulesstr = '{' + ', '.join([str(key)+'->'+'|'.join([val for val in sorted(self.prodrules[key])]) for key in self.prodrules]) + '}'
+        nonterminalsstr = '{'
+        nonterminalsstr += self.start
+        for e in sorted(list(self.nonterminals)):
+            if e == self.start : continue
+            nonterminalsstr += ', ' + e
+        nonterminalsstr += '}'
+        alphabetstr = '{'+(', '.join(sorted(list(self.terminals))))+'}'        
+        tmp = 'FormalGrammer({}, {}, {}, {})'.format(nonterminalsstr,alphabetstr,rulesstr,self.start)
         return tmp
     
     def generate(self, limit=10):
@@ -69,9 +57,12 @@ class FormalGrammer():
                         r = t[:i]+each+t[i+1:]
                         if len(r) <= limit :
                             expanded.append(r)
-            #print(expanded)
+            print(expanded)
             derived.extend(expanded)
-        return set(result)
+        result = list(set(result))
+        result = sorted(result)
+        result = sorted(result, key = lambda x: len(x))
+        return result
 
 if __name__ == '__main__':
     import sys
