@@ -18,11 +18,10 @@ It defines classes_and_methods
 '''
 
 import sys
-from pickle import NONE
 
 class DFA():
     # DFA class constant
-    initial_state = 'q0'
+    initial_state = ''
     
     def __init__(self):
         self.falphabet = set()

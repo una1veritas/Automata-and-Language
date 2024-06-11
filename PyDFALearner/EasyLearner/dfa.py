@@ -3,27 +3,25 @@ Created on 2024/06/01
 
 @author: Sin Shimozono
 '''
-from pickle import TRUE
-from numpy.core.numeric import False_
 
 class DFA(object):
     '''
     classdocs
     '''
-    INITIAL_STATE_NAME = ''
-    POSITIVE_LABEL = '+'
-    NEGATIVE_LABEL = '-'
-    UNDEFINED_LABEL = '0'
+    INITIAL_STATE = ''
+    POSITIVE = '+'
+    NEGATIVE = '0'
+    UNDEFINED = '-'
 
     def __init__(self, falphabet = ''):
         '''
         definitions
         '''
         self.alphabet = set()
-        if falphabet != self.INITIAL_STATE_NAME :
+        if len(falphabet) > 0 :
             for c in str(falphabet) :
                 self.alphabet.add(c)
-        self.initialState = ''
+        self.initialState = self.INITIAL_STATE
         self.states = set()
         self.states.add(self.initialState)
         self.transfunc = dict()
@@ -52,36 +50,38 @@ class DFA(object):
     def transfer(self, q, c):
         if (q,c) in self.transfunc :
             return self.transfunc[(q, c)]
-        return self.UNDEFINED_LABEL
+        return self.UNDEFINED
 
-    def learn(self, exs : dict()):
-        for exstr, exclass in exs.items() :
-            self.initiate()
-            print(exstr, exclass)
-            if not (exclass == self.POSITIVE_LABEL or exclass == self.NEGATIVE_LABEL) :
-                print("Error: invalid class label for an example: "+exstr +", " +exclass)
-                print("Skip this example.")
-                continue 
-            for pos in range(len(exstr)) :
-                c = exstr[pos]
-                if c not in self.alphabet :
-                    self.alphabet.add(c)
-                if not self.defined(self.current, c) :
-                    newstate = self.current + c
-                    self.transfunc[(self.current, c)] = newstate
-                    self.states.add(newstate)
-                    self.transfunc[(newstate, "")] = self.UNDEFINED_LABEL
-                self.current = self.transfunc[(self.current, c)]
-            if self.transfer(self.current, "") == self.UNDEFINED_LABEL :
-                if exclass == self.POSITIVE_LABEL :
-                    self.transfunc[(self.current, "")] = self.POSITIVE_LABEL
-                else:
-                    self.transfunc[(self.current, "")] = self.NEGATIVE_LABEL
-            else:
-                print(self.current, c, self.transfer(self.current, c))
-                if self.transfer(self.current, "") != (exclass == self.POSITIVE_LABEL) :
-                    print("Error: a contradicting example: " + exstr + ", " +exclass)
+    def learn(self, exs):
+        for x in exs:
+            for c in x[0]:
+                self.alphabet.add(c)
+                
+        self.observe(exs)
+        return 
+    
+    def observe(self, exs):
+        ovt = dict()
+        for exstr, exclass in exs :
+            for i in range(0, len(exstr)+1):
+                # s 
+                prefx = exstr[:i]
+                sufx = exstr[i:]
+                if not prefx in ovt :
+                    ovt[prefx] = dict()
+                if sufx in ovt[prefx] and ovt[prefx] != exclass:
+                    print("error: contradicting example, ", exstr, exclass)
                     return 
+                ovt[prefx][sufx] = exclass
+                # s.a
+                for a in self.alphabet :
+                    if prefx + a not in ovt :
+                        ovt[prefx + a] = dict()
+                    
+        print("ovt = ")
+        for key in ovt:
+            print("{0:8}".format("'"+key+"'"), ovt[key])
+        print()
         return
     
     def minimize(self):
