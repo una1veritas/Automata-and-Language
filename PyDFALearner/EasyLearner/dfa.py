@@ -61,26 +61,47 @@ class DFA(object):
         return 
     
     def observe(self, exs):
-        ovt = dict()
+        otbl = dict()
+        extbl = dict()
         for exstr, exclass in exs :
             for i in range(0, len(exstr)+1):
                 # s 
                 prefx = exstr[:i]
                 sufx = exstr[i:]
-                if not prefx in ovt :
-                    ovt[prefx] = dict()
-                if sufx in ovt[prefx] and ovt[prefx] != exclass:
+                if not prefx in otbl :
+                    if prefx in extbl :
+                        otbl[prefx] = extbl[prefx]
+                        extbl.pop(prefx)
+                    else:
+                        otbl[prefx] = dict()
+                if sufx in otbl[prefx] and otbl[prefx] != exclass:
                     print("error: contradicting example, ", exstr, exclass)
                     return 
-                ovt[prefx][sufx] = exclass
+                otbl[prefx][sufx] = exclass
                 # s.a
                 for a in self.alphabet :
-                    if prefx + a not in ovt :
-                        ovt[prefx + a] = dict()
+                    if prefx + a not in otbl :
+                        extbl[prefx + a] = dict()
                     
-        print("ovt = ")
-        for key in ovt:
-            print("{0:8}".format("'"+key+"'"), ovt[key])
+        print("otbl = ")
+        sufxes = set()
+        for k in otbl.keys():
+            sufxes.add(k)
+        for k in extbl.keys() :
+            sufxes.add(k)
+        sufexs = sorted(sufxes, key = lambda x: x[::-1] )
+        print(sufexs)
+        for key in otbl:
+            print("{0:8}".format(key), end="")
+            for s in sufexs:
+                if s in otbl[key]:
+                    print(otbl[key][s],end="")
+                else:
+                    print("*",end="")
+            print()
+        print("-----")
+        for key in extbl:
+            print("{0:8}".format(key), extbl[key])
         print()
         return
     
