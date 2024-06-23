@@ -3,6 +3,7 @@ Created on 2024/06/01
 
 @author: Sin Shimozono
 '''
+from pandas.io.formats.info import _DataFrameInfoPrinter
 
 class DFA(object):
     '''
@@ -61,47 +62,52 @@ class DFA(object):
         return 
     
     def observe(self, exs):
-        otbl = dict()
-        extbl = dict()
+        ovtbl = dict()
+        prfxes = set()
+        extnds = set()
         for exstr, exclass in exs :
             for i in range(0, len(exstr)+1):
                 # s 
                 prefx = exstr[:i]
                 sufx = exstr[i:]
-                if not prefx in otbl :
-                    if prefx in extbl :
-                        otbl[prefx] = extbl[prefx]
-                        extbl.pop(prefx)
-                    else:
-                        otbl[prefx] = dict()
-                if sufx in otbl[prefx] and otbl[prefx] != exclass:
-                    print("error: contradicting example, ", exstr, exclass)
+                if not prefx in ovtbl :
+                    ovtbl[prefx] = dict()
+                    prfxes.add(prefx)
+                if prefx in extnds:
+                    extnds.remove(prefx)
+                    prfxes.add(prefx)
+                if sufx in ovtbl[prefx] and ovtbl[prefx] != exclass:
+                    print("error: a contradicting example, ", exstr, exclass)
                     return 
-                otbl[prefx][sufx] = exclass
+                ovtbl[prefx][sufx] = exclass
                 # s.a
                 for a in self.alphabet :
-                    if prefx + a not in otbl :
-                        extbl[prefx + a] = dict()
+                    if prefx + a not in ovtbl :
+                        extnds.add(prefx + a)
+                        ovtbl[prefx + a] = dict()
                     
-        print("otbl = ")
-        sufxes = set()
-        for k in otbl.keys():
-            sufxes.add(k)
-        for k in extbl.keys() :
-            sufxes.add(k)
-        sufexs = sorted(sufxes, key = lambda x: x[::-1] )
+        print("ovtbl = ")
+        #print(prfxes)
+        #print(extnds)
+        sufexs = sorted([k for k in ovtbl.keys()], key = lambda x: x[::-1] )
         print(sufexs)
-        for key in otbl:
-            print("{0:8}".format(key), end="")
+        for key in sorted(prfxes):
+            print(" {0:8} ".format(key), end="")
             for s in sufexs:
-                if s in otbl[key]:
-                    print(otbl[key][s],end="")
+                if s in ovtbl[key]:
+                    print(ovtbl[key][s],end="")
                 else:
                     print("*",end="")
             print()
         print("-----")
-        for key in extbl:
-            print("{0:8}".format(key), extbl[key])
+        for key in sorted(extnds):
+            print(" {0:>8} ".format(key), end="")
+            for s in sufexs:
+                if s in ovtbl[key]:
+                    print(ovtbl[key][s],end="")
+                else:
+                    print("*",end="")
+            print()
         print()
         return
     
