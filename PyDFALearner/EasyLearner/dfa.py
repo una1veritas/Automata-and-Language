@@ -52,64 +52,89 @@ class DFA(object):
         if (q,c) in self.transfunc :
             return self.transfunc[(q, c)]
         return self.UNDEFINED
-
-    def learn(self, exs):
-        for x in exs:
-            for c in x[0]:
-                self.alphabet.add(c)
-                
-        self.observe(exs)
-        return 
     
-    def observe(self, exs):
-        ovtbl = dict()
-        prfxes = set()
-        extnds = set()
+    def row_string(self, ot, pref):
+        sufxs = sorted(ot[2], key = lambda x: x[::-1])
+        if pref in ot[0] :
+            result = "".join([ot[0][pref][s] if s in ot[0][pref] else '*' for s in sufxs])
+            return result
+        if pref in ot[1] :
+            result = ""
+            result = "".join([ot[1][pref][s] if s in ot[1][pref] else '*' for s in sufxs])
+            return result
+        return ''.join(['*' for i in range(len(sufxs))])
+    
+    def specificThan(self, left, right):
+        if len(left) != len(right) :
+            return False
+        for i in range(len(left)) :
+            if right[i] == '*' :
+                continue
+            else:
+                if left[i] == right[i] :
+                    continue
+                else:
+                    return False
+        return True
+    
+    def learn(self, exs):
+        for xm, cl in exs:
+            for c in xm:
+                self.alphabet.add(c)
+        ot = self.observationTable(exs)
+        for k in ot[0]:
+            print(self.row_string(ot, k))
+        return ot
+    
+    def observationTable(self, exs):
+        prefdict = dict()
+        extdict = dict()
+        sufxes = set()
         for exstr, exclass in exs :
             for i in range(0, len(exstr)+1):
                 # s 
                 prefx = exstr[:i]
                 sufx = exstr[i:]
-                if not prefx in ovtbl :
-                    ovtbl[prefx] = dict()
-                    prfxes.add(prefx)
-                if prefx in extnds:
-                    extnds.remove(prefx)
-                    prfxes.add(prefx)
-                if sufx in ovtbl[prefx] and ovtbl[prefx] != exclass:
+                sufxes.add(sufx)
+                if not prefx in prefdict :
+                    prefdict[prefx] = dict()
+                if prefx in extdict:
+                    row_dict = extdict.pop(prefx)
+                    for k, v in row_dict.items() :
+                        prefdict[prefx][k] = v
+                if sufx in prefdict[prefx] and prefdict[prefx] != exclass:
                     print("error: a contradicting example, ", exstr, exclass)
                     return 
-                ovtbl[prefx][sufx] = exclass
+                prefdict[prefx][sufx] = exclass
+                #print('"'+prefx+'"', '"'+sufx+'"', exclass)
+                
                 # s.a
                 for a in self.alphabet :
-                    if prefx + a not in ovtbl :
-                        extnds.add(prefx + a)
-                        ovtbl[prefx + a] = dict()
+                    if prefx + a not in prefdict :
+                        extdict[prefx + a] = dict()
                     
         print("ovtbl = ")
-        #print(prfxes)
-        #print(extnds)
-        sufexs = sorted([k for k in ovtbl.keys()], key = lambda x: x[::-1] )
+        sufexs = sorted(sufxes, key = lambda x: x[::-1] )
         print(sufexs)
-        for key in sorted(prfxes):
+        for key in sorted(prefdict.keys()):
             print(" {0:8} ".format(key), end="")
             for s in sufexs:
-                if s in ovtbl[key]:
-                    print(ovtbl[key][s],end="")
+                if s in prefdict[key]:
+                    print(prefdict[key][s],end="")
                 else:
                     print("*",end="")
             print()
         print("-----")
-        for key in sorted(extnds):
+        for key in sorted(extdict):
             print(" {0:8} ".format(key[:-1]+"."+key[-1:]), end="")
             for s in sufexs:
-                if s in ovtbl[key]:
-                    print(ovtbl[key][s],end="")
+                if s in extdict[key]:
+                    print(extdict[key][s],end="")
                 else:
                     print("*",end="")
             print()
         print()
-        return
+        return (prefdict, extdict, sufxes)
     
     def minimize(self):
         print("debug: minimize")
