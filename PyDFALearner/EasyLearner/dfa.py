@@ -3,7 +3,7 @@ Created on 2024/06/01
 
 @author: Sin Shimozono
 '''
-from pandas.io.formats.info import _DataFrameInfoPrinter
+
 
 class DFA(object):
     '''
@@ -101,7 +101,7 @@ class DFA(object):
             print()
         print("-----")
         for key in sorted(extnds):
-            print(" {0:>8} ".format(key), end="")
+            print(" {0:8} ".format(key[:-1]+"."+key[-1:]), end="")
             for s in sufexs:
                 if s in ovtbl[key]:
                     print(ovtbl[key][s],end="")
