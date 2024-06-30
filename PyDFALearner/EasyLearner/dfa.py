@@ -3,7 +3,7 @@ Created on 2024/06/01
 
 @author: Sin Shimozono
 '''
-
+import itertools
 
 class DFA(object):
     '''
@@ -64,27 +64,50 @@ class DFA(object):
             return result
         return ''.join(['*' for i in range(len(sufxs))])
     
-    def specificThan(self, left, right):
+    def consistent(self, left, right):
         if len(left) != len(right) :
             return False
         for i in range(len(left)) :
-            if right[i] == '*' :
+            if right[i] == left[i] :
                 continue
             else:
-                if left[i] == right[i] :
+                if left[i] == "*" or right[i] == "*" :
                     continue
                 else:
                     return False
         return True
     
+    def unify(self, left, right):
+        unified = ""
+        if len(left) != len(right) :
+            return unified
+        for i in range(len(left)) :
+            if right[i] == left[i] :
+                unified += right[i]
+            else:
+                if left[i] == "*" :
+                    unified += right[i]
+                elif right[i] == "*" :
+                    unified += left[i]
+                else:
+                    unified += "*"
+        return unified
+        
+    
     def learn(self, exs):
         for xm, cl in exs:
             for c in xm:
                 self.alphabet.add(c)
-        ot = self.observationTable(exs)
-        for k in ot[0]:
-            print(self.row_string(ot, k))
-        return ot
+        (prefdict, extdict, sufxes) = self.observationTable(exs)
+        for p0, p1 in itertools.product(prefdict.keys(), prefdict.keys()):
+            rwstr0 = self.row_string((prefdict, extdict, sufxes), p0)
+            rwstr1 = self.row_string((prefdict, extdict, sufxes), p1)
+            if rwstr0 < rwstr1 :
+                print(p0, rwstr0, p1, rwstr1, self.consistent(rwstr0,rwstr1))
+                if self.consistent(rwstr0,rwstr1) :
+                    print(self.unify(rwstr0, rwstr1))
+                    print(prefdict[p0], prefdict[p1])
+        return (prefdict, extdict, sufxes)
     
     def observationTable(self, exs):
         prefdict = dict()
