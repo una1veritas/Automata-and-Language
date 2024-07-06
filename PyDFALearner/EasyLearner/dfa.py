@@ -99,14 +99,18 @@ class DFA(object):
             for c in xm:
                 self.alphabet.add(c)
         (prefdict, extdict, sufxes) = self.observationTable(exs)
-        for p0, p1 in itertools.product(prefdict.keys(), prefdict.keys()):
-            rwstr0 = self.row_string((prefdict, extdict, sufxes), p0)
-            rwstr1 = self.row_string((prefdict, extdict, sufxes), p1)
-            if rwstr0 < rwstr1 :
-                print(p0, rwstr0, p1, rwstr1, self.consistent(rwstr0,rwstr1))
-                if self.consistent(rwstr0,rwstr1) :
-                    print(self.unify(rwstr0, rwstr1))
-                    print(prefdict[p0], prefdict[p1])
+        while True:
+            for row0, row1 in itertools.product(prefdict.keys(), prefdict.keys()):
+                rowstr0 = self.row_string((prefdict, extdict, sufxes), row0)
+                rowstr1 = self.row_string((prefdict, extdict, sufxes), row1)
+                if rowstr0 >= rowstr1 :
+                    continue
+                print(row0, rowstr0, row1, rowstr1, self.consistent(rowstr0,rowstr1))
+                if self.consistent(rowstr0,rowstr1) :
+                    print(self.unify(rowstr0, rowstr1))
+                    print(prefdict[row0], prefdict[row1])
+            else:
+                break
         return (prefdict, extdict, sufxes)
     
     def observationTable(self, exs):
