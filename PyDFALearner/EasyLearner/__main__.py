@@ -5,11 +5,11 @@ Created on 2024/06/01
 '''
 
 import sys
-from EasyLearner.dfa import DFA
+from dfa import DFA
 
 if __name__ == '__main__':
     examples = list()
-    print(sys.argv)
+    #print(sys.argv)
     if len(sys.argv) == 1 :
         print('examples requested.')
         exit(1)

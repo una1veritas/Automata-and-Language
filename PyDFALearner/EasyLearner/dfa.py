@@ -79,7 +79,7 @@ class DFA(object):
                     return False
         return True
     
-    def unified_rowdict(self, ldict, rdict):
+    def union_rowdict(self, ldict, rdict):
         unified = dict()
         for k in set(ldict.keys()).union(set(rdict.keys())) :
             l, r = ldict.get(k), rdict.get(k)
@@ -96,16 +96,19 @@ class DFA(object):
         
     
     def learn(self, exs):
-        learn_debug = False
+        learn_debug = True
         for xm, clabel in exs:
             for c in xm:
                 self.alphabet.add(c)
         (prefdict, extdict, sufxes) = self.observationTable(exs)
-        
-        idtfytbl = dict()
+        # for k in extdict:
+        #     prefdict[k] = extdict[k]
+        unionfind = dict()
         for k in prefdict:
-            idtfytbl[k] = k
-        if learn_debug : print(idtfytbl)
+            unionfind[k] = k
+        if learn_debug : 
+            #print(unionfind)
+            pass
         
         while True:
             for row0, row1 in itertools.product(prefdict.keys(), prefdict.keys()):
@@ -117,21 +120,23 @@ class DFA(object):
                 if self.consistent(rowstr0,rowstr1) :
                     # merge states
                     if learn_debug : 
-                        print("'"+row0+"', '"+row1+"'", "-> ", end="" ) #, sorted(prefdict[row1].items()))
-                    row01dict = self.unified_rowdict(prefdict[row0], prefdict[row1])
+                        print("row0 = "+row0, prefdict[row0])
+                        print("row1 = "+row1, prefdict[row1] ) #, sorted(prefdict[row1].items()))
+                    row01dict = self.union_rowdict(prefdict[row0], prefdict[row1])
                     prefdict.pop(row1)
                     prefdict[row0] = row01dict
-                    idtfytbl[row1] = row0
-                    for k in idtfytbl:
-                        if idtfytbl[k] == row1 :
-                            idtfytbl[k] = row0
+                    unionfind[row1] = row0
+                    for k in unionfind:
+                        if unionfind[k] == row1 :
+                            unionfind[k] = row0
                     # prefitems = sorted(prefdict.items())
                     # for k, d in prefitems :
                     #     if row1 in d :
                     #         d.pop(row1)
                     if learn_debug : 
-                        print("'"+row0+"'", sorted(row01dict.items()))
-                        print(idtfytbl)
+                        print("row01dict = ",sorted(row01dict.items()))
+                        print("unionfind = " + str(unionfind) )
+                        print("prefdict = " + str(prefdict))
                         print()
                     break
             else:
@@ -143,11 +148,11 @@ class DFA(object):
             print("no initial state error")
             return None
         for s in prefdict :
-            if idtfytbl[s] != s : continue
             for a in self.alphabet :
-                if s+a in idtfytbl :
-                    self.transfunc[(s,a)] = idtfytbl[s + a]
+                if s+a in unionfind :
+                    self.transfunc[(s,a)] = unionfind[s + a]
                 else:
+                    print("open {},{} -> {}".format(s,a,s+a))
                     self.transfunc[(s,a)] = s + a
         for s in self.states :
             if prefdict[s][''] == self.POSITIVE :
