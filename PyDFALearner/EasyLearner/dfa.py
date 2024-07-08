@@ -16,7 +16,8 @@ class DFA(object):
 
     def __init__(self, falphabet = ''):
         '''
-        definitions
+        the definitions of the initial empty automata 
+        accepts no strings
         '''
         self.alphabet = set()
         if len(falphabet) > 0 :
@@ -26,22 +27,23 @@ class DFA(object):
         self.states = set()
         self.states.add(self.initialState)
         self.transfunc = dict()
+        self.acceptingStates = set()
         '''
         computing mechanizm
         '''
         self.current = self.initialState
         
     def __str__(self):
-        return "DFA('" + ''.join(sorted(self.alphabet)) + "', {" \
-            + ', '.join(sorted(self.states)) + "}, initial = '" + str(self.initialState) + "', \n" \
-            + "transition = {" + ', '.join(sorted(["{} -> {}".format(k, v) for k, v in self.transfunc.items() if k[1] != ''])) \
-            + "}, \n" + "finals = " + str(set([s for s in self.states if self.isAccept(s)])) + ")"
+        return "DFA('alphabet = " + ''.join(sorted(self.alphabet)) + "', \n states = {" \
+            + ', '.join([ s if len(s) > 0 else "'"+s+"'" for s in sorted(self.states)]) + "}, \n initial = '" + str(self.initialState) + "', \n" \
+            + " transition = {" + ', '.join(sorted(["{} -> {}".format(k, v) if len(v) > 0 else "{} -> '{}'".format(k, v) for k, v in self.transfunc.items()])) \
+            + "}, \n finals = " + str(self.acceptingStates) + ")"
         
     def initiate(self):
         self.current = self.initialState
     
     def isAccept(self, q) -> bool:
-        return self.transfer(q, '') == True
+        return (q in self.acceptingStates)
     
     def defined(self, q, c):
         if (q, c) in self.transfunc :
@@ -77,40 +79,79 @@ class DFA(object):
                     return False
         return True
     
-    def unify(self, left, right):
-        unified = ""
-        if len(left) != len(right) :
-            return unified
-        for i in range(len(left)) :
-            if right[i] == left[i] :
-                unified += right[i]
+    def unified_rowdict(self, ldict, rdict):
+        unified = dict()
+        for k in set(ldict.keys()).union(set(rdict.keys())) :
+            l, r = ldict.get(k), rdict.get(k)
+            if l == None :
+                unified[k] = rdict[k]
+            elif r == None :
+                unified[k] = ldict[k]
             else:
-                if left[i] == "*" :
-                    unified += right[i]
-                elif right[i] == "*" :
-                    unified += left[i]
+                if rdict[k] == ldict[k] :
+                    unified[k] = ldict[k]
                 else:
-                    unified += "*"
+                    unified[k] = "*"
         return unified
         
     
     def learn(self, exs):
-        for xm, cl in exs:
+        learn_debug = False
+        for xm, clabel in exs:
             for c in xm:
                 self.alphabet.add(c)
         (prefdict, extdict, sufxes) = self.observationTable(exs)
+        
+        idtfytbl = dict()
+        for k in prefdict:
+            idtfytbl[k] = k
+        if learn_debug : print(idtfytbl)
+        
         while True:
             for row0, row1 in itertools.product(prefdict.keys(), prefdict.keys()):
                 rowstr0 = self.row_string((prefdict, extdict, sufxes), row0)
                 rowstr1 = self.row_string((prefdict, extdict, sufxes), row1)
-                if rowstr0 >= rowstr1 :
+                if row0 >= row1 :
                     continue
-                print(row0, rowstr0, row1, rowstr1, self.consistent(rowstr0,rowstr1))
+                #print(row0, rowstr0, row1, rowstr1, self.consistent(rowstr0,rowstr1))
                 if self.consistent(rowstr0,rowstr1) :
-                    print(self.unify(rowstr0, rowstr1))
-                    print(prefdict[row0], prefdict[row1])
+                    # merge states
+                    if learn_debug : 
+                        print("'"+row0+"', '"+row1+"'", "-> ", end="" ) #, sorted(prefdict[row1].items()))
+                    row01dict = self.unified_rowdict(prefdict[row0], prefdict[row1])
+                    prefdict.pop(row1)
+                    prefdict[row0] = row01dict
+                    idtfytbl[row1] = row0
+                    for k in idtfytbl:
+                        if idtfytbl[k] == row1 :
+                            idtfytbl[k] = row0
+                    # prefitems = sorted(prefdict.items())
+                    # for k, d in prefitems :
+                    #     if row1 in d :
+                    #         d.pop(row1)
+                    if learn_debug : 
+                        print("'"+row0+"'", sorted(row01dict.items()))
+                        print(idtfytbl)
+                        print()
+                    break
             else:
                 break
+        self.states = set(prefdict.keys())
+        if '' in self.states :
+            self.initialState = ''
+        else:
+            print("no initial state error")
+            return None
+        for s in prefdict :
+            if idtfytbl[s] != s : continue
+            for a in self.alphabet :
+                if s+a in idtfytbl :
+                    self.transfunc[(s,a)] = idtfytbl[s + a]
+                else:
+                    self.transfunc[(s,a)] = s + a
+        for s in self.states :
+            if prefdict[s][''] == self.POSITIVE :
+                self.acceptingStates.add(s)
         return (prefdict, extdict, sufxes)
     
     def observationTable(self, exs):
@@ -163,17 +204,6 @@ class DFA(object):
         print()
         return (prefdict, extdict, sufxes)
     
-    def minimize(self):
-        print("debug: minimize")
-        ovtable = list()
-        alphindex = [''] + sorted(self.alphabet)
-        for q in self.states :
-            t = list()
-            for c in alphindex :
-                t.append(self.transfer(q, c))
-            ovtable.append((q, t))
-        for e in sorted(ovtable, key=lambda x: x[1]): print(e)
-        
     def commonPrefix(self, str1, str2):
         preflen = 0
         while preflen < min(len(str1), len(str2)) and str1[preflen] == str2[preflen] : 

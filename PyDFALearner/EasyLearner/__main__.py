@@ -29,6 +29,4 @@ if __name__ == '__main__':
     dfa1.learn(examples)
     print(dfa1)
     
-    
-    dfa1.minimize()
     print('finished.')
