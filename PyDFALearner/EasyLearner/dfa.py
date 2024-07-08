@@ -120,8 +120,8 @@ class DFA(object):
                 if self.consistent(rowstr0,rowstr1) :
                     # merge states
                     if learn_debug : 
-                        print("row0 = "+row0, prefdict[row0])
-                        print("row1 = "+row1, prefdict[row1] ) #, sorted(prefdict[row1].items()))
+                        print("row0 = '"+row0+"'", prefdict[row0])
+                        print("row1 = '"+row1+"'", prefdict[row1] ) #, sorted(prefdict[row1].items()))
                     row01dict = self.union_rowdict(prefdict[row0], prefdict[row1])
                     prefdict.pop(row1)
                     prefdict[row0] = row01dict
@@ -135,8 +135,8 @@ class DFA(object):
                     #         d.pop(row1)
                     if learn_debug : 
                         print("row01dict = ",sorted(row01dict.items()))
-                        print("unionfind = " + str(unionfind) )
-                        print("prefdict = " + str(prefdict))
+                        print("states = " + str(set([unionfind[k] for k in unionfind])) )
+                        print("prefdict[{}] = {}".format(row0,str(prefdict[row0])))
                         print()
                     break
             else:
@@ -154,8 +154,9 @@ class DFA(object):
                 else:
                     print("open {},{} -> {}".format(s,a,s+a))
                     self.transfunc[(s,a)] = s + a
+                    self.states.add(s+a)
         for s in self.states :
-            if prefdict[s][''] == self.POSITIVE :
+            if s in prefdict and '' in prefdict[s] and prefdict[s][''] == self.POSITIVE :
                 self.acceptingStates.add(s)
         return (prefdict, extdict, sufxes)
     
@@ -185,7 +186,8 @@ class DFA(object):
                 for a in self.alphabet :
                     if prefx + a not in prefdict :
                         extdict[prefx + a] = dict()
-                    
+        # if '' not in prefdict :
+        #     prefdict[''] = dict()
         print("ovtbl = ")
         sufexs = sorted(sufxes, key = lambda x: x[::-1] )
         print(sufexs)
