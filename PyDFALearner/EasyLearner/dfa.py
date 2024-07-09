@@ -153,8 +153,13 @@ class DFA(object):
                     self.transfunc[(s,a)] = unionfind[s + a]
                 else:
                     print("open {},{} -> {}".format(s,a,s+a))
-                    self.transfunc[(s,a)] = s + a
-                    self.states.add(s+a)
+                    for st in self.states :
+                        if st not in self.acceptingStates :
+                            self.transfunc[(s,a)] = st
+                    else:
+                        self.transfunc[(s,a)] = s+a
+                        for a in self.alphabet :
+                            self.transfunc[(s+a,a)] = s+a
         for s in self.states :
             if s in prefdict and '' in prefdict[s] and prefdict[s][''] == self.POSITIVE :
                 self.acceptingStates.add(s)
