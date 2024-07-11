@@ -4,7 +4,50 @@ Created on 2024/06/01
 @author: Sin Shimozono
 '''
 import itertools
+from idlelib.idle_test.test_configdialog import root
 
+class UnionFindSet(object):
+    def __init__(self, a_collection):
+        # elements ib a_collection must be hashable.
+        self.parent = dict()
+        for x in a_collection:
+            self.parent[x] = x
+    
+    def mergetoleft(self, x, y):
+        x = self.find(x)
+        y = self.find(y)
+        self.parent[y] = x
+    
+    def find(self, x):
+        if x not in self.parent :
+            return None
+        root = x
+        while root != self.parent[root] :
+            root = self.parent[root]
+        while x != self.parent[x] :
+            t = x
+            x = self.parent[x]
+            self.parent[t] = root
+        return x
+    
+    def elements(self):
+        return self.parent.keys()
+    
+    def __str__(self)->str:
+        t = "UnionFindSet{"
+        for k in sorted(self.parent) :
+            if k == self.parent[k] :
+                if isinstance(k, str) :
+                    t+= "'"+k+"'" + " :"
+                else:
+                    t+= str(k) + " :"
+                tmpset = set()
+                for x, r in self.parent.items():
+                    if r == k :
+                        tmpset.add(x)
+                t += str(tmpset) + ", "
+        return t +"} "
+    
 class DFA(object):
     '''
     classdocs
@@ -103,21 +146,19 @@ class DFA(object):
         (prefdict, extdict, sufxes) = self.observationTable(exs)
         # for k in extdict:
         #     prefdict[k] = extdict[k]
-        unionfind = dict()
-        for k in prefdict:
-            unionfind[k] = k
+        unionfind = UnionFindSet(prefdict.keys())
         if learn_debug : 
             #print(unionfind)
             pass
         
         while True:
             for row0, row1 in itertools.product(prefdict.keys(), prefdict.keys()):
-                rowstr0 = self.row_string((prefdict, extdict, sufxes), row0)
-                rowstr1 = self.row_string((prefdict, extdict, sufxes), row1)
                 if row0 >= row1 :
                     continue
-                #print(row0, rowstr0, row1, rowstr1, self.consistent(rowstr0,rowstr1))
+                rowstr0 = self.row_string((prefdict, extdict, sufxes), row0)
+                rowstr1 = self.row_string((prefdict, extdict, sufxes), row1)
                 if self.consistent(rowstr0,rowstr1) :
+                    print(row0, rowstr0, row1, rowstr1, self.consistent(rowstr0,rowstr1))
                     # merge states
                     if learn_debug : 
                         print("row0 = '"+row0+"'", prefdict[row0])
@@ -125,41 +166,44 @@ class DFA(object):
                     row01dict = self.union_rowdict(prefdict[row0], prefdict[row1])
                     prefdict.pop(row1)
                     prefdict[row0] = row01dict
-                    unionfind[row1] = row0
-                    for k in unionfind:
-                        if unionfind[k] == row1 :
-                            unionfind[k] = row0
+                    unionfind.mergetoleft(row0, row1)
+                    print(unionfind)
                     # prefitems = sorted(prefdict.items())
                     # for k, d in prefitems :
                     #     if row1 in d :
                     #         d.pop(row1)
                     if learn_debug : 
                         print("row01dict = ",sorted(row01dict.items()))
-                        print("states = " + str(set([unionfind[k] for k in unionfind])) )
+                        print("states = " + str(prefdict.keys()) )
                         print("prefdict[{}] = {}".format(row0,str(prefdict[row0])))
                         print()
                     break
             else:
                 break
+        print("prefdict = ",prefdict)
         self.states = set(prefdict.keys())
-        if '' in self.states :
-            self.initialState = ''
-        else:
-            print("no initial state error")
-            return None
+        #define transfer function
         for s in prefdict :
             for a in self.alphabet :
-                if s+a in unionfind :
-                    self.transfunc[(s,a)] = unionfind[s + a]
+                eqvstate = unionfind.find(s+a)
+                if eqvstate != None:
+                    print("transfunc[{},{}] -> {}".format(s,a,eqvstate))
+                    self.transfunc[(s,a)] = eqvstate
                 else:
-                    print("open {},{} -> {}".format(s,a,s+a))
+                    print("not defined: ({}, {})".format(s, a))
+                    # print("open {},{} -> {}".format(s,a,s+a))
                     for st in self.states :
                         if st not in self.acceptingStates :
                             self.transfunc[(s,a)] = st
-                    else:
-                        self.transfunc[(s,a)] = s+a
-                        for a in self.alphabet :
-                            self.transfunc[(s+a,a)] = s+a
+                            print("force ({}, {}) -> {}".format(s,a,st))
+                            break
+                    #         print("transfunc[{},{}] -> {}".format(s,a,st))
+                    # else:
+                    #     self.transfunc[(s,a)] = s+a
+                    #     print("transfunc[{},{}] -> {}".format(s,a,s+a))
+                    #     for a in self.alphabet :
+                    #         self.transfunc[(s+a,a)] = s+a
+                    #         print("transfunc[{},{}] -> {}".format(s+a,a,s+a))
         for s in self.states :
             if s in prefdict and '' in prefdict[s] and prefdict[s][''] == self.POSITIVE :
                 self.acceptingStates.add(s)
@@ -168,33 +212,31 @@ class DFA(object):
     def observationTable(self, exs):
         prefdict = dict()
         extdict = dict()
-        sufxes = set()
-        for exstr, exclass in exs :
-            for i in range(0, len(exstr)+1):
+        suffixes = set()
+        for xs, xc in exs :
+            for i in range(0, len(xs)+1):
                 # s 
-                prefx = exstr[:i]
-                sufx = exstr[i:]
-                sufxes.add(sufx)
+                prefx = xs[:i]
+                sufx = xs[i:]
+                suffixes.add(sufx)
                 if not prefx in prefdict :
                     prefdict[prefx] = dict()
-                if prefx in extdict:
-                    row_dict = extdict.pop(prefx)
-                    for k, v in row_dict.items() :
-                        prefdict[prefx][k] = v
-                if sufx in prefdict[prefx] and prefdict[prefx] != exclass:
-                    print("error: a contradicting example, ", exstr, exclass)
+                if sufx in prefdict[prefx] and prefdict[prefx] != xc:
+                    print("error: a contradicting example, ", xs, xc)
                     return 
-                prefdict[prefx][sufx] = exclass
-                #print('"'+prefx+'"', '"'+sufx+'"', exclass)
+                prefdict[prefx][sufx] = xc
+                #print('"'+prefx+'"', '"'+sufx+'"', xc)
                 
                 # s.a
                 for a in self.alphabet :
-                    if prefx + a not in prefdict :
+                    if prefx + a in prefdict :
+                        extdict[prefx + a] = prefdict[prefx+a]
+                    else:
                         extdict[prefx + a] = dict()
         # if '' not in prefdict :
         #     prefdict[''] = dict()
         print("ovtbl = ")
-        sufexs = sorted(sufxes, key = lambda x: x[::-1] )
+        sufexs = sorted(suffixes, key = lambda x: x[::-1] )
         print(sufexs)
         for key in sorted(prefdict.keys()):
             print(" {0:8} ".format(key), end="")
@@ -214,7 +256,7 @@ class DFA(object):
                     print("*",end="")
             print()
         print()
-        return (prefdict, extdict, sufxes)
+        return (prefdict, extdict, suffixes)
     
     def commonPrefix(self, str1, str2):
         preflen = 0
