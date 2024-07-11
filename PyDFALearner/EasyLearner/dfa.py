@@ -4,7 +4,6 @@ Created on 2024/06/01
 @author: Sin Shimozono
 '''
 import itertools
-from idlelib.idle_test.test_configdialog import root
 
 class UnionFindSet(object):
     def __init__(self, a_collection):
@@ -99,15 +98,12 @@ class DFA(object):
         return self.UNDEFINED
     
     def row_string(self, ot, pref):
-        sufxs = sorted(ot[2], key = lambda x: x[::-1])
-        if pref in ot[0] :
-            result = "".join([ot[0][pref][s] if s in ot[0][pref] else '*' for s in sufxs])
+        rows, prefs, sufs = ot
+        sufslist = sorted(sufs, key = lambda x: x[::-1])
+        if pref in rows :
+            result = "".join([rows[pref][s] if s in rows[pref] else '*' for s in sufslist])
             return result
-        if pref in ot[1] :
-            result = ""
-            result = "".join([ot[1][pref][s] if s in ot[1][pref] else '*' for s in sufxs])
-            return result
-        return ''.join(['*' for i in range(len(sufxs))])
+        return ''.join(['*' for i in range(len(sufslist))])
     
     def consistent(self, left, right):
         if len(left) != len(right) :
@@ -143,29 +139,29 @@ class DFA(object):
         for xm, clabel in exs:
             for c in xm:
                 self.alphabet.add(c)
-        (prefdict, extdict, sufxes) = self.observationTable(exs)
+        (rows, prefixes, suffixes) = self.observationTable(exs)
         # for k in extdict:
         #     prefdict[k] = extdict[k]
-        unionfind = UnionFindSet(prefdict.keys())
+        unionfind = UnionFindSet(prefixes)
         if learn_debug : 
             #print(unionfind)
             pass
-        
+         
         while True:
-            for row0, row1 in itertools.product(prefdict.keys(), prefdict.keys()):
+            for row0, row1 in itertools.product(prefixes, prefixes):
                 if row0 >= row1 :
                     continue
-                rowstr0 = self.row_string((prefdict, extdict, sufxes), row0)
-                rowstr1 = self.row_string((prefdict, extdict, sufxes), row1)
-                if self.consistent(rowstr0,rowstr1) :
+                rowstr0 = self.row_string((rows, prefixes, suffixes), row0)
+                rowstr1 = self.row_string((rows, prefixes, suffixes), row1)
+                if self.consistent(rowstr0, rowstr1) :
                     print(row0, rowstr0, row1, rowstr1, self.consistent(rowstr0,rowstr1))
                     # merge states
                     if learn_debug : 
-                        print("row0 = '"+row0+"'", prefdict[row0])
-                        print("row1 = '"+row1+"'", prefdict[row1] ) #, sorted(prefdict[row1].items()))
-                    row01dict = self.union_rowdict(prefdict[row0], prefdict[row1])
-                    prefdict.pop(row1)
-                    prefdict[row0] = row01dict
+                        print("row0 = '"+row0+"'", rows[row0])
+                        print("row1 = '"+row1+"'", rows[row1] ) #, sorted(prefdict[row1].items()))
+                    row01dict = self.union_rowdict(rows[row0], rows[row1])
+                    rows.pop(row1)
+                    rows[row0] = row01dict
                     unionfind.mergetoleft(row0, row1)
                     print(unionfind)
                     # prefitems = sorted(prefdict.items())
@@ -174,16 +170,16 @@ class DFA(object):
                     #         d.pop(row1)
                     if learn_debug : 
                         print("row01dict = ",sorted(row01dict.items()))
-                        print("states = " + str(prefdict.keys()) )
-                        print("prefdict[{}] = {}".format(row0,str(prefdict[row0])))
+                        print("states = " + str(prefixes) )
+                        print("rows[{}] = {}".format(row0,str(rows[row0])))
                         print()
                     break
             else:
                 break
-        print("prefdict = ",prefdict)
-        self.states = set(prefdict.keys())
+        print("rows = ", rows)
+        self.states = set(rows.keys())
         #define transfer function
-        for s in prefdict :
+        for s in rows :
             for a in self.alphabet :
                 eqvstate = unionfind.find(s+a)
                 if eqvstate != None:
@@ -205,58 +201,61 @@ class DFA(object):
                     #         self.transfunc[(s+a,a)] = s+a
                     #         print("transfunc[{},{}] -> {}".format(s+a,a,s+a))
         for s in self.states :
-            if s in prefdict and '' in prefdict[s] and prefdict[s][''] == self.POSITIVE :
+            if s in rows and '' in rows[s] and rows[s][''] == self.POSITIVE :
                 self.acceptingStates.add(s)
-        return (prefdict, extdict, sufxes)
+        return (rows, prefixes, suffixes)
     
     def observationTable(self, exs):
-        prefdict = dict()
-        extdict = dict()
+        rows = dict()
+        prefixes = set()
         suffixes = set()
         for xs, xc in exs :
             for i in range(0, len(xs)+1):
                 # s 
-                prefx = xs[:i]
-                sufx = xs[i:]
-                suffixes.add(sufx)
-                if not prefx in prefdict :
-                    prefdict[prefx] = dict()
-                if sufx in prefdict[prefx] and prefdict[prefx] != xc:
+                prefix = xs[:i]
+                suffix = xs[i:]
+                prefixes.add(prefix) # duplicate addition will be ignored. 
+                suffixes.add(suffix)  # duplicate addition will be ignored. 
+                if not prefix in rows :
+                    rows[prefix] = dict()
+                if suffix in rows[prefix] and rows[prefix][suffix] != xc:
                     print("error: a contradicting example, ", xs, xc)
-                    return 
-                prefdict[prefx][sufx] = xc
-                #print('"'+prefx+'"', '"'+sufx+'"', xc)
-                
+                    return None 
+                rows[prefix][suffix] = xc
+                #print('"'+prefix+'"', '"'+suffix+'"', xc)
                 # s.a
                 for a in self.alphabet :
-                    if prefx + a in prefdict :
-                        extdict[prefx + a] = prefdict[prefx+a]
-                    else:
-                        extdict[prefx + a] = dict()
-        # if '' not in prefdict :
-        #     prefdict[''] = dict()
+                    if not prefix + a in rows :
+                        rows[prefix + a] = dict()
+                    # if not a + suffix in suffixes :
+                    #     suffixes.add(a+suffix)
+                
         print("ovtbl = ")
         sufexs = sorted(suffixes, key = lambda x: x[::-1] )
         print(sufexs)
-        for key in sorted(prefdict.keys()):
+        for key in sorted(rows.keys()):
+            if not key in prefixes :
+                continue
             print(" {0:8} ".format(key), end="")
             for s in sufexs:
-                if s in prefdict[key]:
-                    print(prefdict[key][s],end="")
+                if s in rows[key]:
+                    print(rows[key][s],end="")
                 else:
                     print("*",end="")
             print()
         print("-----")
-        for key in sorted(extdict):
+        for key in sorted(rows.keys()):
+            if key in prefixes :
+                continue
             print(" {0:8} ".format(key[:-1]+"."+key[-1:]), end="")
             for s in sufexs:
-                if s in extdict[key]:
-                    print(extdict[key][s],end="")
+                if s in rows[key]:
+                    print(rows[key][s],end="")
                 else:
                     print("*",end="")
             print()
         print()
-        return (prefdict, extdict, suffixes)
+        return (rows, prefixes, suffixes)
     
     def commonPrefix(self, str1, str2):
         preflen = 0
