@@ -47,6 +47,91 @@ class UnionFindSet(object):
                 t += str(tmpset) + ", "
         return t +"} "
     
+class OvserbationTable(object):
+    EMPTYSTRING = ''
+    
+    def __init__(self):
+        self.rows = dict()
+        self.rows[self.EMPTYSTRING] = dict()
+        self.extends = set()
+        self.suffixes = set()
+        self.suffixes.add(self.EMPTYSTRING)
+    
+    def __str__(self)->str:
+        suflist = sorted(self.suffixes, key = lambda x: x[::-1] )
+        result =  "OvserbationTable(\n" + str(suflist) 
+        result += ", \n"
+        for prefix in self.rows :
+            result += " {0:8} ".format(prefix)
+            result += self.row_string(prefix) + '\n'
+        result += ", {" + str(self.extends) + "}"
+        result += ")"
+        return result
+    
+    def observe(self, falphabet, exstring, exclass):
+        for i in range(0, len(exstring)+1):
+            prefix = exstring[:i]
+            suffix = exstring[i:]
+            if prefix not in self.rows :
+                self.rows[prefix] = dict()
+            self.rows[prefix][suffix] = exclass
+            self.suffixes.add(suffix)  # duplicate addition will be ignored. 
+            for a in falphabet :
+                if prefix + a not in self.rows :
+                    self.extends.add(prefix+a)
+    
+    def row_string(self, pref):
+        suflist = sorted(self.suffixes, key = lambda x: x[::-1])
+        if pref in self.rows :
+            result = "".join([self.rows[pref].get(s, '*') for s in suflist])
+            return result
+        return ''.join(['*' for i in range(len(suflist))])
+    
+    def consistent(self, pref1, pref2):
+        for c1, c2 in zip(self.row_string(pref1), self.row_string(pref2)) :
+            if c1 == c2 :
+                continue
+            if c1 == "*" or c2 == "*" :
+                continue
+            return False
+        return True
+    
+    def is_prefix_complete(self):
+        S = set(self.rows.keys()).union(self.extends)
+        prefixes = set(self.rows.keys())
+        print("S=",S)
+        removed = set()
+        while len(prefixes) > 0:
+            n = len(prefixes)
+            for longest in sorted(S, key = lambda x: len(x), reverse=True) :
+                for i in range(0,len(longest)+1):
+                    pfx = longest[:i]
+                    if pfx in prefixes :
+                        prefixes.remove(pfx)
+                        removed.add(pfx)
+                    elif pfx not in removed :
+                        return False
+            if len(prefixes) == n :
+                break
+        return True
+                
+    def is_suffix_complete(self):
+        suffxs = self.suffixes
+        removed = set()
+        while len(suffxs) > 0:
+            n = len(suffxs)
+            for longest in sorted(suffxs, key = lambda x: len(x), reverse=True) :
+                for i in range(0,len(longest)+1):
+                    sfx = longest[i:]
+                    if sfx in suffxs :
+                        suffxs.remove(sfx)
+                        removed.add(sfx)
+                    elif sfx not in removed :
+                        return False
+            if len(suffxs) == n :
+                break
+        return True
+                
 class DFA(object):
     '''
     classdocs
@@ -96,89 +181,45 @@ class DFA(object):
         if (q,c) in self.transfunc :
             return self.transfunc[(q, c)]
         return self.UNDEFINED
-    
-    def row_string(self, ot, pref):
-        rows, prefs, sufs = ot
-        sufslist = sorted(sufs, key = lambda x: x[::-1])
-        if pref in rows :
-            result = "".join([rows[pref][s] if s in rows[pref] else '*' for s in sufslist])
-            return result
-        return ''.join(['*' for i in range(len(sufslist))])
-    
-    def consistent(self, left, right):
-        if len(left) != len(right) :
-            return False
-        for i in range(len(left)) :
-            if right[i] == left[i] :
-                continue
-            else:
-                if left[i] == "*" or right[i] == "*" :
-                    continue
-                else:
-                    return False
-        return True
-    
-    def union_rowdict(self, ldict, rdict):
-        unified = dict()
-        for k in set(ldict.keys()).union(set(rdict.keys())) :
-            l, r = ldict.get(k), rdict.get(k)
-            if l == None :
-                unified[k] = rdict[k]
-            elif r == None :
-                unified[k] = ldict[k]
-            else:
-                if rdict[k] == ldict[k] :
-                    unified[k] = ldict[k]
-                else:
-                    unified[k] = "*"
-        return unified
         
-    
     def learn(self, exs):
         learn_debug = True
         for xm, clabel in exs:
             for c in xm:
                 self.alphabet.add(c)
-        (rows, prefixes, suffixes) = self.observationTable(exs)
+        ovstable = OvserbationTable()
+        for exs, exc in exs :
+            ovstable.observe(self.alphabet, exs, exc)
+            print(exs, exc)
+            print(ovstable)
+            if ovstable.is_prefix_complete() :
+                print("prefix complete!")
+            if ovstable.is_suffix_complete() :
+                print("suffix complete!")
+            print()
+        print()
+        ovstable.is_prefix_complete()
+        return
         # for k in extdict:
         #     prefdict[k] = extdict[k]
-        unionfind = UnionFindSet(prefixes)
+        unionfind = UnionFindSet(prefixrows.keys())
         if learn_debug : 
             #print(unionfind)
             pass
          
-        while True:
-            for row0, row1 in itertools.product(prefixes, prefixes):
-                if row0 >= row1 :
-                    continue
-                rowstr0 = self.row_string((rows, prefixes, suffixes), row0)
-                rowstr1 = self.row_string((rows, prefixes, suffixes), row1)
-                if self.consistent(rowstr0, rowstr1) :
-                    print(row0, rowstr0, row1, rowstr1, self.consistent(rowstr0,rowstr1))
-                    # merge states
-                    if learn_debug : 
-                        print("row0 = '"+row0+"'", rows[row0])
-                        print("row1 = '"+row1+"'", rows[row1] ) #, sorted(prefdict[row1].items()))
-                    row01dict = self.union_rowdict(rows[row0], rows[row1])
-                    rows.pop(row1)
-                    rows[row0] = row01dict
-                    unionfind.mergetoleft(row0, row1)
-                    print(unionfind)
-                    # prefitems = sorted(prefdict.items())
-                    # for k, d in prefitems :
-                    #     if row1 in d :
-                    #         d.pop(row1)
-                    if learn_debug : 
-                        print("row01dict = ",sorted(row01dict.items()))
-                        print("states = " + str(prefixes) )
-                        print("rows[{}] = {}".format(row0,str(rows[row0])))
-                        print()
-                    break
-            else:
-                break
-        print("rows = ", rows)
-        self.states = set(rows.keys())
+        print("rows = ", prefixrows)
+        self.states = set(prefixrows.keys())
         #define transfer function
+        for a_state in sorted(sorted(self.states), key = lambda x : len(x)) :
+            if '' in prefixrows[a_state] and prefixrows[a_state][''] == self.POSITIVE :
+                self.acceptingStates.add(a_state)
+            for a in self.alphabet :
+                if a_state + a in prefixrows and '' in prefixrows[a_state+a] :
+                    self.transfunc[a_state, a] = prefixrows[a_state+a]['']
+                else:
+                    # find some consistent state/prefix
+                    constate = self.consistent_with((prefixrpws, suffixes), a_state+a)
+        return 
         for s in rows :
             for a in self.alphabet :
                 eqvstate = unionfind.find(s+a)
@@ -203,63 +244,34 @@ class DFA(object):
         for s in self.states :
             if s in rows and '' in rows[s] and rows[s][''] == self.POSITIVE :
                 self.acceptingStates.add(s)
+        # while True:
+        #     for row0, row1 in itertools.product(prefixes, prefixes):
+        #         if row0 >= row1 :
+        #             continue
+        #         rowstr0 = self.row_string((rows, prefixes, suffixes), row0)
+        #         rowstr1 = self.row_string((rows, prefixes, suffixes), row1)
+        #         if self.consistent(rowstr0, rowstr1) :
+        #             print(row0, rowstr0, row1, rowstr1, self.consistent(rowstr0,rowstr1))
+        #             # merge states
+        #             if learn_debug : 
+        #                 print("row0 = '"+row0+"'", rows[row0])
+        #                 print("row1 = '"+row1+"'", rows[row1] ) #, sorted(prefdict[row1].items()))
+        #             row01dict = self.union_rowdict(rows[row0], rows[row1])
+        #             rows.pop(row1)
+        #             rows[row0] = row01dict
+        #             unionfind.mergetoleft(row0, row1)
+        #             print(unionfind)
+        #             # prefitems = sorted(prefdict.items())
+        #             # for k, d in prefitems :
+        #             #     if row1 in d :
+        #             #         d.pop(row1)
+        #             if learn_debug : 
+        #                 print("row01dict = ",sorted(row01dict.items()))
+        #                 print("states = " + str(prefixes) )
+        #                 print("rows[{}] = {}".format(row0,str(rows[row0])))
+        #                 print()
+        #             break
+        #     else:
+        #         break
         return (rows, prefixes, suffixes)
-    
-    def observationTable(self, exs):
-        rows = dict()
-        prefixes = set()
-        suffixes = set()
-        for xs, xc in exs :
-            for i in range(0, len(xs)+1):
-                # s 
-                prefix = xs[:i]
-                suffix = xs[i:]
-                prefixes.add(prefix) # duplicate addition will be ignored. 
-                suffixes.add(suffix)  # duplicate addition will be ignored. 
-                if not prefix in rows :
-                    rows[prefix] = dict()
-                if suffix in rows[prefix] and rows[prefix][suffix] != xc:
-                    print("error: a contradicting example, ", xs, xc)
-                    return None 
-                rows[prefix][suffix] = xc
-                #print('"'+prefix+'"', '"'+suffix+'"', xc)
-                # s.a
-                for a in self.alphabet :
-                    if not prefix + a in rows :
-                        rows[prefix + a] = dict()
-                    # if not a + suffix in suffixes :
-                    #     suffixes.add(a+suffix)
-                
-        print("ovtbl = ")
-        sufexs = sorted(suffixes, key = lambda x: x[::-1] )
-        print(sufexs)
-        for key in sorted(rows.keys()):
-            if not key in prefixes :
-                continue
-            print(" {0:8} ".format(key), end="")
-            for s in sufexs:
-                if s in rows[key]:
-                    print(rows[key][s],end="")
-                else:
-                    print("*",end="")
-            print()
-        print("-----")
-        for key in sorted(rows.keys()):
-            if key in prefixes :
-                continue
-            print(" {0:8} ".format(key[:-1]+"."+key[-1:]), end="")
-            for s in sufexs:
-                if s in rows[key]:
-                    print(rows[key][s],end="")
-                else:
-                    print("*",end="")
-            print()
-        print()
-        return (rows, prefixes, suffixes)
-    
-    def commonPrefix(self, str1, str2):
-        preflen = 0
-        while preflen < min(len(str1), len(str2)) and str1[preflen] == str2[preflen] : 
-            preflen += 1
-        return str1[:preflen]
     
