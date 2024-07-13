@@ -47,38 +47,42 @@ class UnionFindSet(object):
                 t += str(tmpset) + ", "
         return t +"} "
     
-class OvserbationTable(object):
+class ObservationTable(object):
     EMPTYSTRING = ''
     
-    def __init__(self):
+    def __init__(self, finitealphabet):
+        self.alphabet = set(finitealphabet)
         self.rows = dict()
         self.rows[self.EMPTYSTRING] = dict()
-        self.extends = set()
+        self.extension = set()
         self.suffixes = set()
         self.suffixes.add(self.EMPTYSTRING)
     
     def __str__(self)->str:
         suflist = sorted(self.suffixes, key = lambda x: x[::-1] )
-        result =  "OvserbationTable(\n" + str(suflist) 
-        result += ", \n"
+        result =  "ObservationTable(" \
+        + "'" + ''.join(sorted(self.alphabet)) + "', " \
+        + "\n" + str(suflist) 
+        result += ", [\n"
         for prefix in self.rows :
             result += " {0:8} ".format(prefix)
             result += self.row_string(prefix) + '\n'
-        result += ", {" + str(self.extends) + "}"
+        result += "], extension = {" + ', '.join(sorted(self.extension)) + "}"
         result += ")"
         return result
     
-    def observe(self, falphabet, exstring, exclass):
-        for i in range(0, len(exstring)+1):
-            prefix = exstring[:i]
-            suffix = exstring[i:]
+    def extend(self, xstr, xclass):
+        for i in range(0, len(xstr)+1):
+            prefix = xstr[:i]
+            suffix = xstr[i:]
             if prefix not in self.rows :
                 self.rows[prefix] = dict()
-            self.rows[prefix][suffix] = exclass
+                #self.extension.remove(prefix)
+            self.rows[prefix][suffix] = xclass
             self.suffixes.add(suffix)  # duplicate addition will be ignored. 
-            for a in falphabet :
+            for a in self.alphabet :
                 if prefix + a not in self.rows :
-                    self.extends.add(prefix+a)
+                    self.extension.add(prefix+a)
     
     def row_string(self, pref):
         suflist = sorted(self.suffixes, key = lambda x: x[::-1])
@@ -97,39 +101,31 @@ class OvserbationTable(object):
         return True
     
     def is_prefix_complete(self):
-        S = set(self.rows.keys()).union(self.extends)
-        prefixes = set(self.rows.keys())
-        print("S=",S)
         removed = set()
-        while len(prefixes) > 0:
-            n = len(prefixes)
-            for longest in sorted(S, key = lambda x: len(x), reverse=True) :
-                for i in range(0,len(longest)+1):
-                    pfx = longest[:i]
-                    if pfx in prefixes :
-                        prefixes.remove(pfx)
+        for prefix in sorted(self.rows.keys(), key = lambda x: len(x), reverse=True) :
+            for i in range(0,len(prefix)+1):
+                pfx = prefix[:i]
+                if pfx in removed :
+                    continue
+                else:
+                    if pfx in prefix :
                         removed.add(pfx)
-                    elif pfx not in removed :
+                    else:
                         return False
-            if len(prefixes) == n :
-                break
         return True
                 
     def is_suffix_complete(self):
-        suffxs = self.suffixes
         removed = set()
-        while len(suffxs) > 0:
-            n = len(suffxs)
-            for longest in sorted(suffxs, key = lambda x: len(x), reverse=True) :
-                for i in range(0,len(longest)+1):
-                    sfx = longest[i:]
-                    if sfx in suffxs :
-                        suffxs.remove(sfx)
+        for suffix in sorted(self.suffixes, key = lambda x: len(x), reverse=True):
+            for i in range(0,len(suffix)+1):
+                sfx = suffix[i:]
+                if sfx in removed :
+                    continue
+                else:
+                    if sfx in self.suffixes :
                         removed.add(sfx)
-                    elif sfx not in removed :
+                    else:
                         return False
-            if len(suffxs) == n :
-                break
         return True
                 
 class DFA(object):
@@ -187,18 +183,17 @@ class DFA(object):
         for xm, clabel in exs:
             for c in xm:
                 self.alphabet.add(c)
-        ovstable = OvserbationTable()
+        obtable = ObservationTable(self.alphabet)
         for exs, exc in exs :
-            ovstable.observe(self.alphabet, exs, exc)
+            obtable.extend(exs, exc)
             print(exs, exc)
-            print(ovstable)
-            if ovstable.is_prefix_complete() :
+            print(obtable)
+            if obtable.is_prefix_complete() :
                 print("prefix complete!")
-            if ovstable.is_suffix_complete() :
+            if obtable.is_suffix_complete() :
                 print("suffix complete!")
             print()
         print()
-        ovstable.is_prefix_complete()
         return
         # for k in extdict:
         #     prefdict[k] = extdict[k]
