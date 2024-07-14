@@ -53,9 +53,9 @@ class ObservationTable(object):
     
     def __init__(self, finitealphabet):
         self.alphabet = set(finitealphabet)
-        self.prefixes = dict()
-        self.extension = dict()
-        self.extension[self.EMPTYSTRING] = dict()
+        self.prefixes = set()
+        self.rows = dict()
+        self.rows[self.EMPTYSTRING] = dict()
         self.suffixes = set()
         self.suffixes.add(self.EMPTYSTRING)
     
@@ -65,13 +65,13 @@ class ObservationTable(object):
         + "'" + ''.join(sorted(self.alphabet)) + "', " \
         + "\n" + str(suflist) 
         result += ", [\n"
-        for prefix in self.prefixes :
-            result += " {0:8} ".format(prefix)
-            result += self.row_string(prefix) + '\n'
+        for pfx in self.prefixes :
+            result += " {0:8} ".format(pfx)
+            result += self.row_string(pfx) + '\n'
         result += "--------\n"
-        for prefix in self.extension :
-            result += " {0:8} ".format(prefix)
-            result += self.row_string(prefix) + '\n'
+        for pfx in set(self.rows.keys()) - self.prefixes :
+            result += " {0:8} ".format(pfx)
+            result += self.row_string(pfx) + '\n'
         result += "])"
         return result
     
@@ -80,45 +80,32 @@ class ObservationTable(object):
             pfx = xstr[:i]
             sfx = xstr[i:]
             self.suffixes.add(sfx)  # duplicate addition will be ignored. 
-            if pfx in self.prefixes :
-                self.prefixes[pfx][sfx] = xclass
-            elif pfx in self.extension :
-                self.extension[pfx][sfx] = xclass
+            if pfx in self.rows :
+                self.rows[pfx][sfx] = xclass
             else:
-                self.extension[pfx] = dict()
-                self.extension[pfx][sfx] = xclass
+                self.rows[pfx] = dict()
+                self.rows[pfx][sfx] = xclass
             
             if len(pfx) > 0 :
                 for a in self.alphabet :
-                    if pfx[:-1] + a not in self.prefixes and pfx[:-1] + a not in self.extension :
+                    if pfx[:-1] + a not in self.rows :
                         break
                 else:
                     #print("move ", pfx[:-1])
-                    if pfx[:-1] in self.extension :
-                        self.prefixes[pfx[:-1]] = self.extension[pfx[:-1]]
-                        self.extension.pop(pfx[:-1])
+                    if pfx[:-1] in self.rows :
+                        self.prefixes.add(pfx[:-1])
     
-    def row(self, pref):
-        if pref in self.prefixes :
-            return self.prefixes[pref]
-        elif pref in self.extension :
-            return self.extension[pref]
-        else:
-            return None
-
+    
     def row_string(self, pfx):
         suflist = sorted(self.suffixes, key = lambda x: x[::-1])
-        if pfx in self.prefixes :
-            result = "".join([self.prefixes[pfx].get(s, '*') for s in suflist])
-            return result
-        if pfx in self.extension:
-            result = "".join([self.extension[pfx].get(s, '*') for s in suflist])
+        if pfx in self.rows :
+            result = "".join([self.rows[pfx].get(s, '*') for s in suflist])
             return result
         return ''.join(['*' for i in range(len(suflist))])
     
-    def consistent_prefix(self, s1, s2):
-        row1 = self.row(s1)
-        row2 = self.row(s2)
+    def consistent_rows(self, s1, s2):
+        row1 = self.rows.get(s1, None)
+        row2 = self.rows.get(s2, None)
         if row1 is None or row2 is None :
             return False
         #print("prefix {}, {}".format(row1, row2))
@@ -128,12 +115,11 @@ class ObservationTable(object):
         return True
     
     def closed(self):
-        if len(self.prefixes) == 0 :
-            return False
-        for s, a in itertools.product(self.prefixes.keys(), self.alphabet) :
-            #print("{},{}, {}".format(s,a,self.consistent_prefix(s+a, s)))
-            if not self.consistent_prefix(s+a, s) :
-                #print("differ")
+        for t in set(self.rows.keys()) - self.prefixes :
+            for s in self.prefixes :
+                if self.consistent_rows(t, s) :
+                    break
+            else:
                 return False
         return True
     
@@ -143,12 +129,12 @@ class ObservationTable(object):
         for s1, s2 in itertools.product(self.prefixes, self.prefixes) :
             if s1 >= s2:
                 continue
-            if self.consistent_prefix(s1, s2):
-                print("consistency chk:")
+            if self.consistent_rows(s1, s2):
+                #print("consistency chk:")
                 for a in self.alphabet :
-                    if not self.consistent_prefix(s1+a, s2+a) :
+                    if not self.consistent_rows(s1+a, s2+a) :
                         return False
-                print("passed", s1, s2)
+                #print("passed", s1, s2)
         return True
     
 class DFA(object):
@@ -207,16 +193,20 @@ class DFA(object):
             for c in xm:
                 self.alphabet.add(c)
         obtable = ObservationTable(self.alphabet)
+        print()
         for exs, exc in exs :
             obtable.extend(exs, exc)
-            print(exs, exc)
+            print("'{}', {}".format(exs,exc))
             print(obtable)
-            #print("closed = ", obtable.closed_prefixes() )
+            print("closed" if obtable.closed() else "not closed", ",", "consistent" if obtable.consistent() else "not consistent")
             print()
-            print("is consistent =", obtable.consistent())
-            print("is closed =", obtable.closed())
+        else:
+            if not (obtable.consistent() and obtable.closed() ) :
+                print("DFA is not constructable")
+                return
         print()
-
+        print("DFA is constructable by ")
+        print(obtable)
         return
         # for k in extdict:
         #     prefdict[k] = extdict[k]
