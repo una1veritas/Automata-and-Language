@@ -92,8 +92,7 @@ class ObservationTable(object):
                         break
                 else:
                     #print("move ", pfx[:-1])
-                    if pfx[:-1] in self.rows :
-                        self.prefixes.add(pfx[:-1])
+                    self.prefixes.add(pfx[:-1])
     
     
     def row_string(self, pfx):
@@ -103,21 +102,28 @@ class ObservationTable(object):
             return result
         return ''.join(['*' for i in range(len(suflist))])
     
-    def consistent_rows(self, s1, s2):
-        row1 = self.rows.get(s1, None)
-        row2 = self.rows.get(s2, None)
+    def non_contradiction(self, p1, p2):
+        row1 = self.rows.get(p1, None)
+        row2 = self.rows.get(p2, None)
         if row1 is None or row2 is None :
-            return False
+            return True
         #print("prefix {}, {}".format(row1, row2))
         for e in self.suffixes:
             if (e in row1 and e in row2) and row1[e] != row2[e] :
                 return False
         return True
     
+    def non_contradicting_prefix(self, pfx):
+        for p in sorted(self.prefixes, key=lambda x: (len(x), x)) :
+            if self.non_contradiction(pfx, p) :
+                return p
+        return None
+    
     def closed(self):
-        for t in set(self.rows.keys()) - self.prefixes :
+        for p, a in itertools.product(self.prefixes, self.alphabet) :
+            t = p + a
             for s in self.prefixes :
-                if self.consistent_rows(t, s) :
+                if self.non_contradiction(t, s) :
                     break
             else:
                 return False
@@ -129,10 +135,10 @@ class ObservationTable(object):
         for s1, s2 in itertools.product(self.prefixes, self.prefixes) :
             if s1 >= s2:
                 continue
-            if self.consistent_rows(s1, s2):
+            if self.non_contradiction(s1, s2):
                 #print("consistency chk:")
                 for a in self.alphabet :
-                    if not self.consistent_rows(s1+a, s2+a) :
+                    if not self.non_contradiction(s1+a, s2+a) :
                         return False
                 #print("passed", s1, s2)
         return True
@@ -168,7 +174,7 @@ class DFA(object):
     def __str__(self):
         return "DFA('alphabet = " + ''.join(sorted(self.alphabet)) + "', \n states = {" \
             + ', '.join([ s if len(s) > 0 else "'"+s+"'" for s in sorted(self.states)]) + "}, \n initial = '" + str(self.initialState) + "', \n" \
-            + " transition = {" + ', '.join(sorted(["{} -> {}".format(k, v) if len(v) > 0 else "{} -> '{}'".format(k, v) for k, v in self.transfunc.items()])) \
+            + " transition = {" + str(self.transfunc.items()) \
             + "}, \n finals = " + str(self.acceptingStates) + ")"
         
     def initiate(self):
@@ -196,90 +202,37 @@ class DFA(object):
         print()
         for exs, exc in exs :
             obtable.extend(exs, exc)
-            print("'{}', {}".format(exs,exc))
+            print("example: '{}', {}".format(exs,exc))
             print(obtable)
-            print("closed" if obtable.closed() else "not closed", ",", "consistent" if obtable.consistent() else "not consistent")
+            print("closed:", obtable.closed(), "consistent:", obtable.consistent())
+            if obtable.closed() and obtable.consistent() :
+                #define transfer function
+                for pfx in sorted(sorted(obtable.prefixes), key = lambda x : (len(x), x) ) :
+                    if pfx not in self.states: 
+                        eqvpfx = obtable.non_contradicting_prefix(pfx) 
+                        if eqvpfx == None :
+                            self.states.add(pfx)
+                        else:
+                            self.states.add(eqvpfx)
+                            pfx = eqvpfx
+
+                    for a in self.alphabet :
+                        print(pfx, a, obtable.non_contradicting_prefix(pfx + a))
+                        dst = obtable.non_contradicting_prefix(pfx + a)
+                        if dst == None :
+                            dst = pfx+a
+                        self.transfunc[(pfx,a)] = dst
+                            
+                
+                print(self.states, self.transfunc)
+                for st in self.states :
+                    if obtable.rows[st][''] == self.POSITIVE :
+                        self.acceptingStates.add(pfx)
+                        print(self)
             print()
-        else:
-            if not (obtable.consistent() and obtable.closed() ) :
-                print("DFA is not constructable")
-                return
-        print()
-        print("DFA is constructable by ")
+        print("DFA constructable by ")
         print(obtable)
-        return
-        # for k in extdict:
-        #     prefdict[k] = extdict[k]
-        unionfind = UnionFindSet(prefixrows.keys())
-        if learn_debug : 
-            #print(unionfind)
-            pass
-         
-        print("prefixes = ", prefixrows)
-        self.states = set(prefixrows.keys())
-        #define transfer function
-        for a_state in sorted(sorted(self.states), key = lambda x : len(x)) :
-            if '' in prefixrows[a_state] and prefixrows[a_state][''] == self.POSITIVE :
-                self.acceptingStates.add(a_state)
-            for a in self.alphabet :
-                if a_state + a in prefixrows and '' in prefixrows[a_state+a] :
-                    self.transfunc[a_state, a] = prefixrows[a_state+a]['']
-                else:
-                    # find some consistent state/prefix
-                    constate = self.consistent_with((prefixrpws, suffixes), a_state+a)
+        
         return 
-        for s in rows :
-            for a in self.alphabet :
-                eqvstate = unionfind.find(s+a)
-                if eqvstate != None:
-                    print("transfunc[{},{}] -> {}".format(s,a,eqvstate))
-                    self.transfunc[(s,a)] = eqvstate
-                else:
-                    print("not defined: ({}, {})".format(s, a))
-                    # print("open {},{} -> {}".format(s,a,s+a))
-                    for st in self.states :
-                        if st not in self.acceptingStates :
-                            self.transfunc[(s,a)] = st
-                            print("force ({}, {}) -> {}".format(s,a,st))
-                            break
-                    #         print("transfunc[{},{}] -> {}".format(s,a,st))
-                    # else:
-                    #     self.transfunc[(s,a)] = s+a
-                    #     print("transfunc[{},{}] -> {}".format(s,a,s+a))
-                    #     for a in self.alphabet :
-                    #         self.transfunc[(s+a,a)] = s+a
-                    #         print("transfunc[{},{}] -> {}".format(s+a,a,s+a))
-        for s in self.states :
-            if s in rows and '' in rows[s] and rows[s][''] == self.POSITIVE :
-                self.acceptingStates.add(s)
-        # while True:
-        #     for row0, row1 in itertools.product(prefixes, prefixes):
-        #         if row0 >= row1 :
-        #             continue
-        #         rowstr0 = self.row_string((prefixes, prefixes, suffixes), row0)
-        #         rowstr1 = self.row_string((prefixes, prefixes, suffixes), row1)
-        #         if self.consistent(rowstr0, rowstr1) :
-        #             print(row0, rowstr0, row1, rowstr1, self.consistent(rowstr0,rowstr1))
-        #             # merge states
-        #             if learn_debug : 
-        #                 print("row0 = '"+row0+"'", prefixes[row0])
-        #                 print("row1 = '"+row1+"'", prefixes[row1] ) #, sorted(prefdict[row1].items()))
-        #             row01dict = self.union_rowdict(prefixes[row0], prefixes[row1])
-        #             prefixes.pop(row1)
-        #             prefixes[row0] = row01dict
-        #             unionfind.mergetoleft(row0, row1)
-        #             print(unionfind)
-        #             # prefitems = sorted(prefdict.items())
-        #             # for k, d in prefitems :
-        #             #     if row1 in d :
-        #             #         d.pop(row1)
-        #             if learn_debug : 
-        #                 print("row01dict = ",sorted(row01dict.items()))
-        #                 print("states = " + str(prefixes) )
-        #                 print("prefixes[{}] = {}".format(row0,str(prefixes[row0])))
-        #                 print()
-        #             break
-        #     else:
-        #         break
-        return (rows, prefixes, suffixes)
+
     
