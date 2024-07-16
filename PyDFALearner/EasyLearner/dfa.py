@@ -86,7 +86,7 @@ class ObservationTable(object):
                 self.rows[pfx] = dict()
                 self.rows[pfx][sfx] = xclass
             
-            if len(pfx) > 0 :
+            if len(pfx) > 0 and '' in self.rows[pfx[:-1]]:
                 for a in self.alphabet :
                     if pfx[:-1] + a not in self.rows :
                         break
@@ -172,9 +172,9 @@ class DFA(object):
         self.current = self.initialState
         
     def __str__(self):
-        return "DFA('alphabet = " + ''.join(sorted(self.alphabet)) + "', \n states = {" \
+        return "DFA(alphabet = {" + ', '.join(sorted(self.alphabet)) + "}, \n states = {" \
             + ', '.join([ s if len(s) > 0 else "'"+s+"'" for s in sorted(self.states)]) + "}, \n initial = '" + str(self.initialState) + "', \n" \
-            + " transition = {" + str(self.transfunc.items()) \
+            + " transition = {" + ", ".join(["{} -> '{}'".format(k, v) for k, v in self.transfunc.items()]) \
             + "}, \n finals = " + str(self.acceptingStates) + ")"
         
     def initiate(self):
@@ -192,6 +192,31 @@ class DFA(object):
         if (q,c) in self.transfunc :
             return self.transfunc[(q, c)]
         return self.UNDEFINED
+    
+    def define_machine(self, obtable):
+        self.states.clear()
+        self.acceptingStates.clear()
+        
+        for pfx in sorted(sorted(obtable.prefixes), key = lambda x : (len(x), x) ) :
+            if pfx not in self.states: 
+                eqvpfx = obtable.non_contradicting_prefix(pfx) 
+                if eqvpfx == None :
+                    self.states.add(pfx)
+                else:
+                    self.states.add(eqvpfx)
+                    pfx = eqvpfx
+
+            for a in self.alphabet :
+                #print(pfx, a, obtable.non_contradicting_prefix(pfx + a))
+                dst = obtable.non_contradicting_prefix(pfx + a)
+                if dst == None :
+                    dst = pfx+a
+                self.transfunc[(pfx,a)] = dst
+        #print(self.states, self.transfunc)
+        for st in self.states :
+            if obtable.rows[st][''] == self.POSITIVE :
+                self.acceptingStates.add(st)
+        
         
     def learn(self, exs):
         learn_debug = True
@@ -207,28 +232,8 @@ class DFA(object):
             print("closed:", obtable.closed(), "consistent:", obtable.consistent())
             if obtable.closed() and obtable.consistent() :
                 #define transfer function
-                for pfx in sorted(sorted(obtable.prefixes), key = lambda x : (len(x), x) ) :
-                    if pfx not in self.states: 
-                        eqvpfx = obtable.non_contradicting_prefix(pfx) 
-                        if eqvpfx == None :
-                            self.states.add(pfx)
-                        else:
-                            self.states.add(eqvpfx)
-                            pfx = eqvpfx
-
-                    for a in self.alphabet :
-                        print(pfx, a, obtable.non_contradicting_prefix(pfx + a))
-                        dst = obtable.non_contradicting_prefix(pfx + a)
-                        if dst == None :
-                            dst = pfx+a
-                        self.transfunc[(pfx,a)] = dst
-                            
-                
-                print(self.states, self.transfunc)
-                for st in self.states :
-                    if obtable.rows[st][''] == self.POSITIVE :
-                        self.acceptingStates.add(pfx)
-                        print(self)
+                self.define_machine(obtable)
+                print(self)
             print()
         print("DFA constructable by ")
         print(obtable)
