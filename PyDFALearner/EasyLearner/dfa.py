@@ -54,8 +54,8 @@ class ObservationTable(object):
     def __init__(self, finitealphabet):
         self.alphabet = set(finitealphabet)
         self.prefixes = set()
-        self.rows = dict()
-        self.rows[self.EMPTYSTRING] = dict()
+        self.row = dict()
+        self.row[self.EMPTYSTRING] = dict()
         self.suffixes = set()
         self.suffixes.add(self.EMPTYSTRING)
     
@@ -69,7 +69,7 @@ class ObservationTable(object):
             result += " {0:8} ".format(pfx)
             result += self.row_string(pfx) + '\n'
         result += "--------\n"
-        for pfx in set(self.rows.keys()) - self.prefixes :
+        for pfx in set(self.row.keys()) - self.prefixes :
             result += " {0:8} ".format(pfx)
             result += self.row_string(pfx) + '\n'
         result += "])"
@@ -80,15 +80,13 @@ class ObservationTable(object):
             pfx = xstr[:i]
             sfx = xstr[i:]
             self.suffixes.add(sfx)  # duplicate addition will be ignored. 
-            if pfx in self.rows :
-                self.rows[pfx][sfx] = xclass
-            else:
-                self.rows[pfx] = dict()
-                self.rows[pfx][sfx] = xclass
+            if pfx not in self.row :
+                self.row[pfx] = dict()
+            self.row[pfx][sfx] = xclass
             
-            if len(pfx) > 0 and '' in self.rows[pfx[:-1]]:
+            if len(pfx) > 0 and '' in self.row[pfx[:-1]]:
                 for a in self.alphabet :
-                    if pfx[:-1] + a not in self.rows :
+                    if pfx[:-1] + a not in self.row :
                         break
                 else:
                     #print("move ", pfx[:-1])
@@ -97,14 +95,14 @@ class ObservationTable(object):
     
     def row_string(self, pfx):
         suflist = sorted(self.suffixes, key = lambda x: x[::-1])
-        if pfx in self.rows :
-            result = "".join([self.rows[pfx].get(s, '*') for s in suflist])
+        if pfx in self.row :
+            result = "".join([self.row[pfx].get(s, '*') for s in suflist])
             return result
         return ''.join(['*' for i in range(len(suflist))])
     
     def non_contradiction(self, p1, p2):
-        row1 = self.rows.get(p1, None)
-        row2 = self.rows.get(p2, None)
+        row1 = self.row.get(p1, None)
+        row2 = self.row.get(p2, None)
         if row1 is None or row2 is None :
             return True
         #print("prefix {}, {}".format(row1, row2))
@@ -214,7 +212,7 @@ class DFA(object):
                 self.transfunc[(pfx,a)] = dst
         #print(self.states, self.transfunc)
         for st in self.states :
-            if obtable.rows[st][''] == self.POSITIVE :
+            if obtable.row[st][''] == self.POSITIVE :
                 self.acceptingStates.add(st)
         
         
