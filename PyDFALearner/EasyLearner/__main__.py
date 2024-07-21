@@ -24,7 +24,6 @@ if __name__ == '__main__':
     print("Given examples: ", examples)
     
     dfa1 = DFA()
-    print(dfa1)
 
     dfa1.learn(examples)
     print(dfa1)

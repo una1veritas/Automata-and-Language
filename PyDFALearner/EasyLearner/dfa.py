@@ -4,50 +4,8 @@ Created on 2024/06/01
 @author: Sin Shimozono
 '''
 import itertools
-from pickle import FALSE
+from orderedset import OrderedSet
 
-class UnionFindSet(object):
-    def __init__(self, a_collection):
-        # elements ib a_collection must be hashable.
-        self.parent = dict()
-        for x in a_collection:
-            self.parent[x] = x
-    
-    def mergetoleft(self, x, y):
-        x = self.find(x)
-        y = self.find(y)
-        self.parent[y] = x
-    
-    def find(self, x):
-        if x not in self.parent :
-            return None
-        root = x
-        while root != self.parent[root] :
-            root = self.parent[root]
-        while x != self.parent[x] :
-            t = x
-            x = self.parent[x]
-            self.parent[t] = root
-        return x
-    
-    def elements(self):
-        return self.parent.keys()
-    
-    def __str__(self)->str:
-        t = "UnionFindSet{"
-        for k in sorted(self.parent) :
-            if k == self.parent[k] :
-                if isinstance(k, str) :
-                    t+= "'"+k+"'" + " :"
-                else:
-                    t+= str(k) + " :"
-                tmpset = set()
-                for x, r in self.parent.items():
-                    if r == k :
-                        tmpset.add(x)
-                t += str(tmpset) + ", "
-        return t +"} "
-    
 class ObservationTable(object):
     EMPTYSTRING = ''
     
@@ -56,21 +14,20 @@ class ObservationTable(object):
         self.prefixes = set()
         self.row = dict()
         self.row[self.EMPTYSTRING] = dict()
-        self.suffixes = set()
-        self.suffixes.add(self.EMPTYSTRING)
+        self.suffixes = OrderedSet(key=lambda x: (len(x), x))
+        self.suffixes.insert(self.EMPTYSTRING)
     
     def __str__(self)->str:
-        suflist = sorted(self.suffixes, key = lambda x: x[::-1] )
         result =  "ObservationTable(" \
         + "'" + ''.join(sorted(self.alphabet)) + "', " \
-        + "\n" + str(suflist) 
+        + "\n" + str(self.suffixes) 
         result += ", [\n"
-        for pfx in self.prefixes :
-            result += " {0:8} ".format(pfx)
+        for pfx in sorted(self.prefixes) :
+            result += " {0:8}| ".format(pfx)
             result += self.row_string(pfx) + '\n'
         result += "--------\n"
-        for pfx in set(self.row.keys()) - self.prefixes :
-            result += " {0:8} ".format(pfx)
+        for pfx in sorted(set(self.row.keys()) - self.prefixes) :
+            result += " {0:8}| ".format(pfx)
             result += self.row_string(pfx) + '\n'
         result += "])"
         return result
@@ -79,7 +36,7 @@ class ObservationTable(object):
         for i in range(0, len(xstr)+1):
             pfx = xstr[:i]
             sfx = xstr[i:]
-            self.suffixes.add(sfx)  # duplicate addition will be ignored. 
+            self.suffixes.insert(sfx)  # duplicate addition will be ignored. 
             if pfx not in self.row :
                 self.row[pfx] = dict()
             self.row[pfx][sfx] = xclass
@@ -94,11 +51,10 @@ class ObservationTable(object):
     
     
     def row_string(self, pfx):
-        suflist = sorted(self.suffixes, key = lambda x: x[::-1])
         if pfx in self.row :
-            result = "".join([self.row[pfx].get(s, '*') for s in suflist])
+            result = "".join([self.row[pfx].get(s, '*') for s in self.suffixes])
             return result
-        return ''.join(['*' for i in range(len(suflist))])
+        return ''.join(['*' for i in range(len(self.suffixes))])
     
     def non_contradiction(self, p1, p2):
         row1 = self.row.get(p1, None)
@@ -224,8 +180,8 @@ class DFA(object):
         obtable = ObservationTable(self.alphabet)
         print()
         for exs, exc in exs :
-            obtable.extend(exs, exc)
             print("example: '{}', {}".format(exs,exc))
+            obtable.extend(exs, exc)
             print(obtable)
             print("closed:", obtable.closed(), "consistent:", obtable.consistent())
             if obtable.closed() and obtable.consistent() :
