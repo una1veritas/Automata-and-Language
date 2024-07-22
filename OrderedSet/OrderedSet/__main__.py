@@ -6,6 +6,12 @@ Created on 2024/07/21
 
 import sys
 from orderedset import OrderedSet
+from btreeset import BTree
 
-s = OrderedSet(sys.argv[1:])
-print(s)
+t = BTree()
+for d in sys.argv[1:] :
+    t.insert(d)
+    print(t)
+    
+
+print("finished. ")

@@ -134,7 +134,7 @@ class DFA(object):
     def initiate(self):
         self.current = self.initialState
     
-    def isAccept(self, q) -> bool:
+    def is_accept(self, q) -> bool:
         return (q in self.acceptingStates)
     
     def defined(self, q, c):
@@ -147,6 +147,12 @@ class DFA(object):
             return self.transfunc[(q, c)]
         return self.UNDEFINED
     
+    def accept(self, s):
+        self.initiate()
+        for c in s:
+            self.current = self.transfer(self.current, c)
+        return self.is_accept(self.current)
+        
     def define_machine(self, obtable):
         self.states.clear()
         self.acceptingStates.clear()
@@ -171,15 +177,31 @@ class DFA(object):
             if obtable.row[st][''] == self.POSITIVE :
                 self.acceptingStates.add(st)
         
+    
+    def get_example(self):
+        exs = ''
+        exc = ''
+        while True:
+            ex = input("例をください")
+            arr = ex.split(",")
+            if len(arr) == 2 :
+                exs = arr[0]
+                exc = arr[1]
+                exs = exs.strip()
+                exc = exc.strip()
+            if exc not in ["+", "-"] :
+                print("例は文字列と正負のラベルを , で区切ってください．")
+                print("正負のラベルは + か - でお願いします．")
+            else:
+                break
+        return exs, exc
         
-    def learn(self, exs):
-        learn_debug = True
-        for xm, clabel in exs:
-            for c in xm:
-                self.alphabet.add(c)
+    def learn(self):
         obtable = ObservationTable(self.alphabet)
-        print()
-        for exs, exc in exs :
+        while True:
+            exs, exc = self.get_example()
+            for c in exs:
+                self.alphabet.add(c)
             print("example: '{}', {}".format(exs,exc))
             obtable.extend(exs, exc)
             print(obtable)
@@ -188,10 +210,11 @@ class DFA(object):
                 #define transfer function
                 self.define_machine(obtable)
                 print(self)
-            print()
-        print("DFA constructable by ")
+                print("判例があればください")
+                exs, exc = self.get_example()
+                obtable.extend(exs, exc)
+        print("おわります．")
         print(obtable)
-        
         return 
 
     
