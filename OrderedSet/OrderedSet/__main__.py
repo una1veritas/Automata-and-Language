@@ -16,5 +16,5 @@ for d in sys.argv[1:] :
 
 print("finished. ")
 '''
-Ameli Alice Anette Amy Brad Bob Betty Ben Bolis Cathy Charles Claudia Cindy Colin David Daisy
+Ameli Alice Anette Amy Brad Bob Betty Ben Bolis Cathy Charles Claudia Cindy Colin David Daisy Aderyn Abbie Ada
 '''

@@ -8,15 +8,19 @@ class BTree:
     SIZE_UPPERBOUND = 4 - 1
     
     class Node:
-        def __init__(self, data = None, lchild = None, rchild = None, parent = None):
-            self.elements = list()
-            if data != None :
-                self.elements.append(data)
-            self.children = list()
-            if lchild != None or rchild != None :
-                self.children.append(lchild)
-                self.children.append(rchild)
-            self.parent = parent
+        def __init__(self, data = None, children = None):
+            if isinstance(data, list) :
+                self.elements = list(data)
+            elif data != None :
+                self.elements = [data]
+            else:
+                self.elements = list()
+            if isinstance(children, list) :
+                if len(children) > 0 and len(children) != len(self.elements) + 1 :
+                    raise ValueError("the number of children contradicts with that of elements! {} : {}".format(len(children), len(self.elements)) )
+                self.children = list(children)
+            else:
+                self.children = list()
         
         def __str__(self):
             outstr = "("
@@ -35,15 +39,12 @@ class BTree:
         def size(self):
             return len(self.elements)
         
-        def is_root(self):
-            return self.parent == None
-        
         def is_leaf(self):
             return len(self.children) == 0
         
         def has_rightsibling(self, parent, poshint = None, data=None):
             if poshint == None and data != None:
-                poshint = parent.find_node_position(data)
+                poshint = parent.find_path(data)
             elif poshint == None and data == None :
                 for i in range(parent.size()+1) :
                     if parent.children[i] == self :
@@ -56,7 +57,7 @@ class BTree:
                 
         def has_leftsibling(self, parent, poshint = None, data=None):
             if poshint == None and data != None:
-                poshint = parent.find_node_position(data)
+                poshint = parent.find_path(data)
             elif poshint == None and data == None :
                 for i in range(parent.size()+1) :
                     if parent.children[i] == self :
@@ -66,7 +67,6 @@ class BTree:
                 return True
             else:
                 return False
-                
                 
         def lower_bound(self, elem, key):
             # print()
@@ -84,25 +84,23 @@ class BTree:
             return ridx
     
         def insert_internal(self, ix, data, left, right):
-            print(data, ix, "left", left, "right", right)
+            #print(data, ix, "left", left, "right", right)
             self.elements.insert(ix, data)
-            print("self.elements=",self.elements)
+            #print("self.elements=",self.elements)
             self.children.insert(ix+1,right)
             self.children[ix] = left
-            print("insert internal: ", self.elements, self.children)
+            #print("insert internal: ", self.elements, self.children)
             return ix
         
         def split(self):
             if self.size() <= BTree.SIZE_UPPERBOUND :
                 return # nothing is worng.
             ix = self.size() >> 1
-            updata = self.elements[ix]
-            rsibling = BTree.Node()
-            rsibling.elements = self.elements[ix+1:]
-            rsibling.chldren = self.children[ix+1:]
+            goesup = self.elements[ix]
+            rsibling = BTree.Node(self.elements[ix+1:], self.children[ix+1:])
             self.elements = self.elements[:ix]
             self.children = self.children[:ix+1]
-            return updata, self, rsibling
+            return (goesup, self, rsibling)
         
         def rotate_right(self, parent, posatp = None):
             if posatp == None :
@@ -111,11 +109,13 @@ class BTree:
                         posatp = i
                         break
             rsibling = parent.children[posatp+1]
-            if rsibling.is_leaf() :
-                updata = self.elements.pop()
-                downdata = parent.elements[posatp]
-                parent.elements[posatp] = updata
-                rsibling.elements.insert(0,downdata)
+            goesup = self.elements.pop()
+            goesdwn = parent.elements[posatp]
+            parent.elements[posatp] = goesup
+            rsibling.elements.insert(0, goesdwn)
+            if not rsibling.is_leaf() :
+                nephew = self.children.pop()
+                rsibling.children.insert(0, nephew)
         
         def rotate_left(self, parent, posatp = None):
             if posatp == None :
@@ -124,11 +124,13 @@ class BTree:
                         posatp = i
                         break
             lsibling = parent.children[posatp - 1]
-            if lsibling.is_leaf() :
-                updata = self.elements.pop(0)
-                downdata = parent.elements[posatp-1]
-                parent.elements[posatp-1] = updata
-                lsibling.elements.insert(lsibling.size(), downdata)
+            goesup = self.elements.pop(0)
+            goesdwn = parent.elements[posatp-1]
+            parent.elements[posatp-1] = goesup
+            lsibling.elements.append(goesdwn)
+            if not lsibling.is_leaf() :
+                nephew = self.children.pop(0)
+                lsibling.children.append(nephew)
 
     def __init__(self, key= lambda x: x):
         self.root = None
@@ -137,7 +139,18 @@ class BTree:
     def __str__(self):
         return "BTree"+str(self.root)
     
-    def find_node_position(self, data):
+    def enumerate(self):
+        if self.root :
+            path = [[self.root, 0]]
+        else:
+            return
+        while len(path) :
+            node = path[-1][0]
+            ix = path[-1][1]
+            if not node.is_leaf() :
+                path.append(node.children[ix], 0)
+    
+    def find_path(self, data):
         path = [[self.root, None]]
         while True:
             node = path[-1][0]
@@ -158,45 +171,41 @@ class BTree:
             self.root = BTree.Node(data)
             return
         
-        path = self.find_node_position(data)
-        print("path = ", path, " data = ", data)
+        path = self.find_path(data)
         node, position = path.pop()
         if position < node.size() and node.elements[position] == data :
-            print(data, " found. Cancel insertion.")
+            print(data, " existing. Cancel insertion.")
             return 
         # node must be a leaf.
         node.elements.insert(position, data)
         while node.size() > self.SIZE_UPPERBOUND :
-            print(path)
+            print("path = ", path)
+            print("temporarily over sized node = ", node)
             if len(path) == 0 :
                 # the node is the root
-                print("the node is the root.", node)
+                #print("the node is the root.", node)
                 updata, left, right = node.split()
-                print("updata = ", updata, "left = ", left, "right = ", right)
-                self.root = BTree.Node(updata,left,right)
-                left.parent = self.root
-                right.parent = self.root
+                #print("updata = ", updata, "left = ", left, "right = ", right)
+                self.root = BTree.Node(updata,[left,right])
                 break
             elif len(path) > 0 : 
                 ''' node has the parent '''
                 parent, ppos = path[-1]
-                print("path=",path)
-                print("parent = ", parent, " node = ", node)
+                #print("path=",path)
+                #print("parent = ", parent, " node = ", node)
                 if node.has_rightsibling(parent, ppos) :
                     ''' has only left siblings '''
                     node.rotate_right(parent,ppos)
                     break
                 elif node.has_leftsibling(parent, ppos):
                     ''' must have right siblings '''
+                    #print("rotate left")
                     node.rotate_left(parent, ppos)
                     break
                 else:
-                    print("no siblings with sufficient space!")
+                    #print("no siblings with sufficient space!")
                     updata, left, right = node.split()
-                    #print("split ", updata, left, ",", right)
-                    # left or right is node
                     parent.insert_internal(ppos,updata,left,right)
-                    #print("parent =", parent)
-                    #print("parent.children =", parent.children)
+                    # going up
                     node, ppos = path.pop()
                     
