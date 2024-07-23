@@ -19,18 +19,13 @@ class BTree:
             self.parent = parent
         
         def __str__(self):
-            outstr = "Node("
-            if not self.is_leaf() :
-                outstr += str(self.children[0])
-                outstr += ", "
-            for i in range(self.size() - 1) :
-                outstr += str(self.elements[i])
-                if not self.is_leaf() :
-                    outstr += ", " + str(self.children[i])
-                outstr += ", "
-            outstr += str(self.elements[-1])
-            if not self.is_leaf() :
-                outstr += ", " + str(self.children[-1])
+            outstr = "("
+            if self.is_leaf() :
+                outstr += ", ".join(self.elements)
+            else:
+                for i in range(self.size()) :
+                    outstr += str(self.children[i]) + ", " + str(self.elements[i]) + ", "
+                outstr += str(self.children[-1])
             outstr += ") "
             return outstr
         
@@ -67,7 +62,7 @@ class BTree:
                     if parent.children[i] == self :
                         poshint = i
                         break
-            if parent.children[poshint].size() < BTree.SIZE_UPPERBOUND :
+            if poshint > 0 and parent.children[poshint - 1].size() < BTree.SIZE_UPPERBOUND :
                 return True
             else:
                 return False
@@ -89,13 +84,12 @@ class BTree:
             return ridx
     
         def insert_internal(self, ix, data, left, right):
+            print(data, ix, "left", left, "right", right)
             self.elements.insert(ix, data)
-            print("insert internal: ", self.elements, self.children)
-            print("insert internal 2: ", data, left, right)
-            self.children[ix] = left
-            print("children=", self.children)
+            print("self.elements=",self.elements)
             self.children.insert(ix+1,right)
-            print("children=", self.children)
+            self.children[ix] = left
+            print("insert internal: ", self.elements, self.children)
             return ix
         
         def split(self):
@@ -109,13 +103,39 @@ class BTree:
             self.elements = self.elements[:ix]
             self.children = self.children[:ix+1]
             return updata, self, rsibling
+        
+        def rotate_right(self, parent, posatp = None):
+            if posatp == None :
+                for i in range(parent.size()+1) :
+                    if parent.children[i] == self :
+                        posatp = i
+                        break
+            rsibling = parent.children[posatp+1]
+            if rsibling.is_leaf() :
+                updata = self.elements.pop()
+                downdata = parent.elements[posatp]
+                parent.elements[posatp] = updata
+                rsibling.elements.insert(0,downdata)
+        
+        def rotate_left(self, parent, posatp = None):
+            if posatp == None :
+                for i in range(parent.size()+1) :
+                    if parent.children[i] == self :
+                        posatp = i
+                        break
+            lsibling = parent.children[posatp - 1]
+            if lsibling.is_leaf() :
+                updata = self.elements.pop(0)
+                downdata = parent.elements[posatp-1]
+                parent.elements[posatp-1] = updata
+                lsibling.elements.insert(lsibling.size(), downdata)
 
     def __init__(self, key= lambda x: x):
         self.root = None
         self.sortkey = key
     
     def __str__(self):
-        return str(self.root)
+        return "BTree"+str(self.root)
     
     def find_node_position(self, data):
         path = [[self.root, None]]
@@ -139,37 +159,44 @@ class BTree:
             return
         
         path = self.find_node_position(data)
-        print()
-        print(path, data)
+        print("path = ", path, " data = ", data)
         node, position = path.pop()
         if position < node.size() and node.elements[position] == data :
             print(data, " found. Cancel insertion.")
             return 
         # node must be a leaf.
         node.elements.insert(position, data)
-        if node.size() > self.SIZE_UPPERBOUND :
+        while node.size() > self.SIZE_UPPERBOUND :
+            print(path)
             if len(path) == 0 :
                 # the node is the root
+                print("the node is the root.", node)
                 updata, left, right = node.split()
+                print("updata = ", updata, "left = ", left, "right = ", right)
                 self.root = BTree.Node(updata,left,right)
                 left.parent = self.root
                 right.parent = self.root
+                break
             elif len(path) > 0 : 
                 ''' node has the parent '''
                 parent, ppos = path[-1]
+                print("path=",path)
+                print("parent = ", parent, " node = ", node)
                 if node.has_rightsibling(parent, ppos) :
                     ''' has only left siblings '''
                     node.rotate_right(parent,ppos)
+                    break
                 elif node.has_leftsibling(parent, ppos):
                     ''' must have right siblings '''
                     node.rotate_left(parent, ppos)
+                    break
                 else:
-                    print("node ",node,"has no sufficient siblings!")
+                    print("no siblings with sufficient space!")
                     updata, left, right = node.split()
-                    print("split ", updata, left, ",", right)
+                    #print("split ", updata, left, ",", right)
                     # left or right is node
-                    ix = parent.lower_bound(data, self.sortkey)
-                    parent.insert_internal(ix,updata,left,right)
-                    print("parent =", parent)
-                    print("parent.children =", parent.children)
+                    parent.insert_internal(ppos,updata,left,right)
+                    #print("parent =", parent)
+                    #print("parent.children =", parent.children)
+                    node, ppos = path.pop()
                     
