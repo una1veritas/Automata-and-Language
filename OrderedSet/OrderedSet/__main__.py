@@ -14,7 +14,13 @@ for d in sys.argv[1:] :
     t.insert(d)
     print("updated btree =", t, "\n")
 
-print("finished. ")
+# for d in t:
+#     print(d)
+
+for s in t:
+    print(s)
+    
+print(len(t))
 '''
 Ameli Alice Anette Amy Brad Bob Betty Ben Bolis Cathy Charles Claudia Cindy Colin David Daisy Aderyn Abbie Ada
 '''

@@ -18,6 +18,13 @@ class OrderedSet(object):
     def __next__(self):
         return self.elements.__next__()
     
+    def __len__(self):
+        return len(self.elements)
+    
+    def __contains__(self, d):
+        ix = self.lower_bound(d)
+        return self.elements[ix] == d
+    
     def insert_all(self, collection):
         for e in collection:
             self.insert(e)

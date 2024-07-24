@@ -199,22 +199,19 @@ class DFA(object):
     def learn(self):
         obtable = ObservationTable(self.alphabet)
         while True:
-            exs, exc = self.get_example()
-            for c in exs:
-                self.alphabet.add(c)
-            print("example: '{}', {}".format(exs,exc))
-            obtable.extend(exs, exc)
-            print(obtable)
-            print("closed:", obtable.closed(), "consistent:", obtable.consistent())
-            if obtable.closed() and obtable.consistent() :
-                #define transfer function
+            if not obtable.closed() :
+                '''issue membership query'''
+                pass
+            elif not obtable.consistent() :
+                '''issue membership query'''
+            else:
+                '''issue equivalence query'''
                 self.define_machine(obtable)
                 print(self)
                 print("判例があればください")
-                exs, exc = self.get_example()
-                obtable.extend(exs, exc)
-        print("おわります．")
-        print(obtable)
+                
+                print("なければおわります．")
+                break
         return 
 
     
