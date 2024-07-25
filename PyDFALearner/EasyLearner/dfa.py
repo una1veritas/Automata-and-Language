@@ -11,7 +11,8 @@ class ObservationTable(object):
     
     def __init__(self, finitealphabet):
         self.alphabet = set(finitealphabet)
-        self.prefixes = set()
+        self.prefixes = OrderedSet(key=lambda x: (len(x), x))
+        self.prefixes.insert(self.EMPTYSTRING)
         self.row = dict()
         self.row[self.EMPTYSTRING] = dict()
         self.suffixes = OrderedSet(key=lambda x: (len(x), x))
@@ -26,7 +27,7 @@ class ObservationTable(object):
             result += " {0:8}| ".format(pfx)
             result += self.row_string(pfx) + '\n'
         result += "--------\n"
-        for pfx in sorted(set(self.row.keys()) - self.prefixes) :
+        for pfx in sorted(set(self.row.keys()) - set(self.prefixes)) :
             result += " {0:8}| ".format(pfx)
             result += self.row_string(pfx) + '\n'
         result += "])"
@@ -47,7 +48,7 @@ class ObservationTable(object):
                         break
                 else:
                     #print("move ", pfx[:-1])
-                    self.prefixes.add(pfx[:-1])
+                    self.prefixes.insert(pfx[:-1])
     
     
     def row_string(self, pfx):
@@ -85,27 +86,22 @@ class ObservationTable(object):
         return None
     
     def closed(self):
-        for p, a in itertools.product(self.prefixes, self.alphabet) :
-            t = p + a
-            for s in self.prefixes :
-                if self.non_contradiction(t, s) :
-                    break
-            else:
-                return False
-        return True
+        if self.first_open_prefix() == None :
+            return True
+        return False
     
-    def first_open_prefix(self):
-        if len(self.prefixes) == 0 :
-            return sorted(self.row.keys(), key=lambda x: (len(x), x))[0]
+    def open_prefixes(self):
+        res = set()
         for p, a in itertools.product(self.prefixes, self.alphabet) :
             t = p + a
-            diff = True
+            if t not in self.row :
+                res.add(t)
             for s in self.prefixes :
                 if self.non_contradiction(t, s) :
-                    diff = False
-            if diff :
-                return t
-        return None
+                    equiv_t = s
+            if equiv_t == None :
+                res.add(t)
+        return res
     
     def consistent(self):
         if len(self.prefixes) == 0 :
@@ -135,6 +131,14 @@ class ObservationTable(object):
                         return (s1, s2, a, sfx)
                 #print("passed", s1, s2)
         return True
+    
+    def unspecified_pairs(self):
+        res = set()
+        for p in self.prefixes:
+            for s in self.suffixes:
+                if s not in self.row[p]:
+                    res.add( (p, s) )
+        return res
     
 class DFA(object):
     '''
@@ -239,6 +243,14 @@ class DFA(object):
         obtable = ObservationTable(self.alphabet)
         while True:
             print(obtable)
+            unspairs = obtable.unspecified_pairs()
+            while unspairs :
+                print(unspairs)
+                pfx, sfx = unspairs.pop()
+                xc = input("Wether '{}' is + or - ? ".format(pfx+sfx))
+                obtable.extend(pfx+sfx,xc)
+                print(obtable)
+            print("unspairs cleared.")
             q = obtable.inconsistent_quadruple()
             print("inconsistent quadruple = ", q)
             if q != None :
@@ -248,21 +260,22 @@ class DFA(object):
                     if p+a+e not in obtable.row : 
                         xc = input(p+a+e)
                         obtable.extend(p+a+e, xc)
-            q = obtable.first_open_prefix()
-            print("first open prefix = ", q)
-            if q != None :
+                        print(obtable)
+            q = obtable.open_prefixes()
+            while q :
+                print("open prefixes = ", q)
                 '''issue membership query'''
-                for e in obtable.suffixes:
-                    xc = input("Is '{}' an example or a counter-example?".format(q+e))
-                    obtable.extend(q+e,xc)
-            else:
-                '''issue equivalence query'''
-                self.define_machine(obtable)
-                print(self)
-                print("判例があればください")
-                
-                print("なければおわります．")
-                break
+                p = q.pop()
+                xc = input("Wether '{}' is + or - ? ".format(p))
+                obtable.extend(p,xc)
+                print(obtable)
+            '''issue equivalence query'''
+            self.define_machine(obtable)
+            print(self)
+            print("判例があればください")
+            
+            print("なければおわります．")
+            break
         return 
 
     

@@ -23,7 +23,7 @@ if __name__ == '__main__':
     #         examples.append( (exstr, exclass) )
     # print("Given examples: ", examples)
     
-    dfa1 = DFA()
+    dfa1 = DFA("ab")
 
     dfa1.learn_by_mat()
     print(dfa1)
