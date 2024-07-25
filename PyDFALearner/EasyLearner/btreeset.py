@@ -3,10 +3,9 @@ Created on 2024/07/22
 
 @author: sin
 '''
-from argparse import _StoreTrueAction
 
 class BTree:
-    SIZE_UPPERBOUND = 4 - 1
+    SIZE_UPPERBOUND = 3 - 1
     
     class Node:
         def __init__(self, data = None, children = None):
@@ -15,11 +14,9 @@ class BTree:
             else:
                 self.elements = list()
             if isinstance(children, list) :
-                if len(children) > 0 and len(children) != len(self.elements) + 1 :
-                    raise ValueError("the number of children contradicts with that of elements! {} : {}".format(len(children), len(self.elements)) )
-                self.children = list(children)
+                self.children = list(children)[:len(self.elements)+2]
             else:
-                self.children = list()
+                self.children = None
         
         def __str__(self):
             outstr = "("
@@ -39,7 +36,7 @@ class BTree:
             return len(self.elements)
         
         def is_leaf(self):
-            return len(self.children) == 0
+            return self.children == None
         
         def has_rightsibling(self, parent, poshint = None, data=None):
             if poshint == None and data != None:
@@ -98,9 +95,10 @@ class BTree:
             goesup = self.elements[ix]
             rsibling = BTree.Node()
             rsibling.elements = self.elements[ix+1:]
-            rsibling.children = self.children[ix+1:]
             self.elements = self.elements[:ix]
-            self.children = self.children[:ix+1]
+            if not self.is_leaf() :
+                rsibling.children = self.children[ix+1:]
+                self.children = self.children[:ix+1]
             return (goesup, self, rsibling)
         
         def rotate_right(self, parent, posatp = None):

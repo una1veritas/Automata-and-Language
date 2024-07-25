@@ -67,6 +67,17 @@ class ObservationTable(object):
                 return False
         return True
     
+    def first_contradictiing_suffix(self, p1, p2):
+        row1 = self.row.get(p1, None)
+        row2 = self.row.get(p2, None)
+        if row1 is None or row2 is None :
+            return None
+        #print("prefix {}, {}".format(row1, row2))
+        for e in self.suffixes:
+            if (e in row1 and e in row2) and row1[e] != row2[e] :
+                return e
+        return None
+    
     def non_contradicting_prefix(self, pfx):
         for p in sorted(self.prefixes, key=lambda x: (len(x), x)) :
             if self.non_contradiction(pfx, p) :
@@ -83,6 +94,19 @@ class ObservationTable(object):
                 return False
         return True
     
+    def first_open_prefix(self):
+        if len(self.prefixes) == 0 :
+            return sorted(self.row.keys(), key=lambda x: (len(x), x))[0]
+        for p, a in itertools.product(self.prefixes, self.alphabet) :
+            t = p + a
+            diff = True
+            for s in self.prefixes :
+                if self.non_contradiction(t, s) :
+                    diff = False
+            if diff :
+                return t
+        return None
+    
     def consistent(self):
         if len(self.prefixes) == 0 :
             return False
@@ -94,6 +118,21 @@ class ObservationTable(object):
                 for a in self.alphabet :
                     if not self.non_contradiction(s1+a, s2+a) :
                         return False
+                #print("passed", s1, s2)
+        return True
+    
+    def inconsistent_quadruple(self):
+        if len(self.prefixes) <= 1 :
+            return None
+        for s1, s2 in itertools.product(self.prefixes, self.prefixes) :
+            if s1 >= s2:
+                continue
+            if self.non_contradiction(s1, s2):
+                #print("consistency chk:")
+                for a in self.alphabet :
+                    sfx = self.first_contradicting_suffix(s1+a, s2+a) 
+                    if sfx != None :
+                        return (s1, s2, a, sfx)
                 #print("passed", s1, s2)
         return True
     
@@ -196,14 +235,26 @@ class DFA(object):
                 break
         return exs, exc
         
-    def learn(self):
+    def learn_by_mat(self):
         obtable = ObservationTable(self.alphabet)
         while True:
-            if not obtable.closed() :
+            print(obtable)
+            q = obtable.inconsistent_quadruple()
+            print("inconsistent quadruple = ", q)
+            if q != None :
                 '''issue membership query'''
-                pass
-            elif not obtable.consistent() :
+                (s1, s2, a, e) = q
+                for p in obtable.prefixes:
+                    if p+a+e not in obtable.row : 
+                        xc = input(p+a+e)
+                        obtable.extend(p+a+e, xc)
+            q = obtable.first_open_prefix()
+            print("first open prefix = ", q)
+            if q != None :
                 '''issue membership query'''
+                for e in obtable.suffixes:
+                    xc = input("Is '{}' an example or a counter-example?".format(q+e))
+                    obtable.extend(q+e,xc)
             else:
                 '''issue equivalence query'''
                 self.define_machine(obtable)

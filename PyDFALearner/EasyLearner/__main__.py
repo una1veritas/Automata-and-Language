@@ -25,7 +25,7 @@ if __name__ == '__main__':
     
     dfa1 = DFA()
 
-    dfa1.learn()
+    dfa1.learn_by_mat()
     print(dfa1)
     
     print('finished.')
