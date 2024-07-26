@@ -23,6 +23,8 @@ class OrderedSet(object):
     
     def __contains__(self, d):
         ix = self.lower_bound(d)
+        if ix >= len(self.elements) : 
+            return False 
         return self.elements[ix] == d
     
     def insert_all(self, collection):
