@@ -95,9 +95,12 @@ class ObservationTable(object):
         for p, a in itertools.product(self.prefixes, self.alphabet) :
             t = p + a
             if t not in self.row :
-                res.add(t)
+                #res.add(t)
+                self.suffixes.insert(t)
+            equiv_t = None
             for s in self.prefixes :
                 if self.non_contradiction(t, s) :
+                    print("non contradicting pair ",t,s)
                     equiv_t = s
             if equiv_t == None :
                 res.add(t)
@@ -244,13 +247,26 @@ class DFA(object):
         while True:
             print(obtable)
             unspairs = obtable.unspecified_pairs()
-            while unspairs :
-                print(unspairs)
-                pfx, sfx = unspairs.pop()
-                xc = input("Wether '{}' is + or - ? ".format(pfx+sfx))
-                obtable.extend(pfx+sfx,xc)
-                print(obtable)
-            print("unspairs cleared.")
+            if unspairs :
+                print("unspecified pairs = ",unspairs)
+                while unspairs :
+                    pfx, sfx = unspairs.pop()
+                    xc = input("Wether '{}' is + or - ? ".format(pfx+sfx))
+                    obtable.extend(pfx+sfx,xc)
+                    print(obtable)
+                print("unspairs cleared.")
+                continue
+            openpfxs = obtable.open_prefixes()
+            if openpfxs :
+                print("open pfxes = ", openpfxs)
+                while openpfxs :
+                    '''issue membership query'''
+                    pfx = openpfxs.pop()
+                    xc = input("Wether '{}' is + or - ? ".format(pfx))
+                    obtable.extend(pfx,xc)
+                    print(obtable)
+                print("open prefixes cleared.")
+                continue
             q = obtable.inconsistent_quadruple()
             print("inconsistent quadruple = ", q)
             if q != None :
@@ -261,14 +277,6 @@ class DFA(object):
                         xc = input(p+a+e)
                         obtable.extend(p+a+e, xc)
                         print(obtable)
-            q = obtable.open_prefixes()
-            while q :
-                print("open prefixes = ", q)
-                '''issue membership query'''
-                p = q.pop()
-                xc = input("Wether '{}' is + or - ? ".format(p))
-                obtable.extend(p,xc)
-                print(obtable)
             '''issue equivalence query'''
             self.define_machine(obtable)
             print(self)
