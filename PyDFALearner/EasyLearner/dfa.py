@@ -73,44 +73,61 @@ class ObservationTable(object):
             if self.row[pfx1][e] != self.row[pfx2][e] :
                 return False
         return True
+
+    def collect_disagree_suffix(self, pfx1, pfx2):
+        res = set()
+        for e in self.suffixes :
+            if pfx1 not in self.row or pfx2 not in self.row :
+                continue
+            if e not in self.row[pfx1] or e not in self.row[pfx2] :
+                continue
+            if self.row[pfx1][e] != self.row[pfx2][e] :
+                res.add(e)
+        return res
         
     def closed(self):
-        for p, a in itertools.product(self.prefixes, self.alphabet) :
+        # for p in self.row.keys():
+        #     if not self.EMPTYSTRING in self.row[p] :
+        #         return False
+        for p, a in itertools.product(self.row.keys(), self.alphabet) :
             if self.EMPTYSTRING not in self.row[p] :
                 return False
-            t = p + a
-            if t not in self.row :
-                return False
-            for pref in self.prefixes:
-                if self.rows_agree(pref, t) :
-                    break
-            else:
-                return False
+            if p in self.prefixes:
+                t = p + a
+                if t not in self.row :
+                    return False
+                for pref in self.prefixes:
+                    if self.rows_agree(pref, t) :
+                        break
+                else:
+                    return False
         return True
     
     def collect_open_prefixes(self):
         result = set()
-        for p, a in itertools.product(self.prefixes, self.alphabet) :
+        # for p in self.row.keys():
+        #     if not self.EMPTYSTRING in self.row[p] :
+        #         return result.add(p)
+        for p, a in itertools.product(self.row.keys(), self.alphabet) :
             if self.EMPTYSTRING not in self.row[p] :
-                print("add {} since not in self.row".format(self.EMPTYSTRING))
+                # print("add {} since not in self.row".format(self.EMPTYSTRING))
                 result.add(self.EMPTYSTRING)
-            t = p + a
-            if t not in self.row :
-                print("add {} since not in self.row".format(t))
-                result.add(t)
-            # for pref in self.prefixes:
-            #     if self.rows_agree(pref, t) :
-            #         break
-            # else:
-            #     print("add {} since no agreeing row".format(t))
-            #     self.prefixes.insert(t)
-                #result.add(t)
+            if p in self.prefixes :
+                t = p + a
+                if t not in self.row :
+                    # print("add {} since not in self.row".format(t))
+                    result.add(t)
+                # for pref in self.prefixes:
+                #     if self.rows_agree(pref, t) :
+                #         break
+                # else:
+                #     print("add {} since no agreeing row".format(t))
+                #     self.prefixes.insert(t)
+                    #result.add(t)
         return result
         
         
     def consistent(self):
-        if len(self.prefixes) == 0 :
-            return False
         for s1, s2 in itertools.product(self.prefixes, self.prefixes) :
             if s1 >= s2:
                 continue
@@ -123,6 +140,20 @@ class ObservationTable(object):
                         return False
                 #print("passed", s1, s2)
         return True
+
+    def collect_inconsistent_evidence(self):
+        res = set()
+        for s1, s2 in itertools.product(self.prefixes, self.prefixes) :
+            if s1 >= s2:
+                continue
+            if self.rows_agree(s1, s2) :
+               #print("consistency chk:")
+                for a in self.alphabet :
+                    if not self.rows_agree(s1+a, s2+a) :
+                        for sfx in self.collect_disagree_suffix(s1+a, s2+a) :
+                            res.add(sfx)
+                #print("passed", s1, s2)
+        return res
 
     def unspecified_pairs(self):
         res = set()
@@ -196,25 +227,18 @@ class DFA(object):
         self.states.clear()
         self.acceptingStates.clear()
         
-        for pfx in sorted(sorted(obtable.prefixes), key = lambda x : (len(x), x) ) :
+        for pfx in obtable.prefixes :
             if pfx not in self.states: 
-                eqvpfx = obtable.non_contradicting_prefix(pfx) 
-                if eqvpfx == None :
-                    self.states.add(pfx)
-                else:
-                    self.states.add(eqvpfx)
-                    pfx = eqvpfx
-
-            for a in self.alphabet :
-                #print(pfx, a, obtable.non_contradicting_prefix(pfx + a))
-                dst = obtable.non_contradicting_prefix(pfx + a)
-                if dst == None :
-                    dst = pfx+a
-                self.transfunc[(pfx,a)] = dst
-        #print(self.states, self.transfunc)
-        for st in self.states :
-            if obtable.row[st][''] == self.POSITIVE :
-                self.acceptingStates.add(st)
+                self.states.add(pfx)
+                for a in self.alphabet :
+                    self.transfunc[(pfx,a)] = pfx + a
+                    for s in obtable.prefixes:
+                        if obtable.rows_agree(s, pfx+a) :
+                            self.transfunc[(pfx,a)] = s
+                            break
+        for s in self.states :
+            if obtable.row[s][''] == obtable.EXAMPLE_LABEL :
+                self.acceptingStates.add(s)
         
     
     def get_example(self):
@@ -248,13 +272,30 @@ class DFA(object):
                 #     print(obtable)
                 openprefs = obtable.collect_open_prefixes()
                 while openprefs :
-                    print(openprefs)
+                    # print(openprefs)
                     pref = openprefs.pop()
                     xc = input("open mq: '{}' ? ".format(pref))
                     obtable.extend(pref, xc)
                     print(obtable)
-            break
-        print(obtable)
+            self.define_machine(obtable)
+            print(self)
+            cxpair = input("eq: is there a counter-example? ")
+            if not cxpair :
+                break
+            cxpair = cxpair.split(',')
+            if self.accept(cxpair[0]) :
+                if len(cxpair) < 2 :
+                    cxpair.append('0') 
+                if cxpair[1] in ('+', '1') :
+                    continue
+            else:
+                if len(cxpair) < 2 :
+                    cxpair.append('1') 
+                if cxpair[1] in ('-', '0') :
+                    continue
+            obtable.extend(cxpair[0], cxpair[1])
+                
+            print(obtable)
         return 
 
     
