@@ -27,6 +27,9 @@ class OrderedSet(object):
             return False 
         return self.elements[ix] == d
     
+    def __getitem__(self, idx):
+        return self.elements[idx]
+    
     def insert_all(self, collection):
         for e in collection:
             self.insert(e)
