@@ -6,6 +6,7 @@ Created on 2024/06/01
 import itertools
 from orderedset import OrderedSet
 from pickle import NONE
+from xlwt.BIFFRecords import ContinueRecord
 
 class ObservationTable(object):
     EMPTYSTRING = ''
@@ -17,25 +18,33 @@ class ObservationTable(object):
         self.rows = dict()
         self.prefixes = OrderedSet(key=lambda x: (len(x), x))
         self.suffixes = OrderedSet(key=lambda x: (len(x), x))
-        self.auxextensions = set()
+        self.extensions = set()
         
         self.prefixes.insert(self.EMPTYSTRING)
         self.rows[self.EMPTYSTRING] = dict()
+        self.extensions.add(self.EMPTYSTRING)
         self.suffixes.insert(self.EMPTYSTRING)
     
     def __str__(self)->str:
         result =  "ObservationTable(" + "'" + ''.join(sorted(self.alphabet)) + "', " 
-        result += ", \n"  + str(self.suffixes) + ",\n"
+        result += ", \n"  + str(self.suffixes) + str(sorted(self.extensions - set(self.suffixes), key=lambda x: (len(x),x))) + ",\n"
         for pfx in self.prefixes :
             result += " {0:8}| ".format(pfx)
-            result += self.row_string(pfx) + '\n'
+            result += self.extension_string(pfx) + '\n'
         result += "--------\n"
         for pfx, a in itertools.product(self.prefixes, self.alphabet) :
             if pfx+a not in self.prefixes :
                 result += " {0:8}| ".format(pfx+a)
-                result += self.row_string(pfx+a) + '\n'
+                result += self.extension_string(pfx+a) + '\n'
         result += "])"
         return result
+    
+    def add_suffix(self, sfx):
+        self.extensions.add(sfx)
+        self.suffixes.insert(sfx)
+    
+    def add_extension(self, sfx):
+        self.extensions.add(sfx)
     
     def extend(self, xstr, xclass, addprefixes=False):
         if xclass not in ('+', '-','0', '1', 0, 1) :
@@ -52,6 +61,8 @@ class ObservationTable(object):
                 self.rows[pfx] = dict()
             if pfx not in self.prefixes and addprefixes:
                 self.prefixes.insert(pfx)
+            if sfx not in self.extensions:
+                self.extensions.add(sfx)
             self.rows[pfx][sfx] = xclass
 
     
@@ -60,7 +71,15 @@ class ObservationTable(object):
             result = "".join([str(self.rows[pfx].get(s, ' ')) for s in self.suffixes])
             return result
         return ''.join([' ' for i in self.suffixes])
-    
+
+    def extension_string(self, pfx):
+        result = self.row_string(pfx) + " "
+        if pfx in self.rows :
+            result += "".join([str(self.rows[pfx].get(s, ' ')) for s in sorted(self.extensions -set(self.suffixes), key=lambda x: (len(x), x))])
+        else:
+            result += ''.join([' ' for i in sorted(self.extensions -set(self.suffixes), key=lambda x: (len(x), x))])    
+        return result
+
     def rows_disagree(self, pfx1, pfx2):
         for e in self.suffixes :
             if pfx1 not in self.rows or pfx2 not in self.rows :
@@ -75,14 +94,6 @@ class ObservationTable(object):
         return self.rows_disagree(pfx1, pfx2) == None
      
     def find_stray_prefix(self):
-        # for x in self.extensions:
-        #     print("ext", x)
-        #     for pfx in self.prefixes:
-        #         if self.rows_agree(pfx, x) :
-        #             break
-        #     else:
-        #         #print("has no agreeing prefix")
-        #         return x
         for p, a in itertools.product(self.prefixes, self.alphabet) :
             t = p + a
             if t not in self.rows :
@@ -116,7 +127,7 @@ class ObservationTable(object):
 
     def unspecified_pairs(self):
         res = set()
-        for p in self.rows:
+        for p in self.prefixes:
             for e in self.suffixes:
                 if p not in self.rows or e not in self.rows[p]:
                     res.add( (p, e) )
@@ -189,21 +200,20 @@ class DFA(object):
     def define_machine(self, obtable):
         self.states.clear()
         self.acceptingStates.clear()
-        eqvgroups = dict()
+        rowstrings = dict()
         for pfx in obtable.prefixes :
-            row = obtable.row_string(pfx)
-            if row not in eqvgroups :
-                eqvgroups[row] = list()
-                eqvgroups[row].append(pfx)
+            rowstr = obtable.row_string(pfx)
+            if rowstr not in rowstrings :
                 self.states.add(pfx)
-                for a in self.alphabet :
-                    self.transfunc[(pfx,a)] = pfx + a
-                    if pfx+a in eqvgroups :
-                        self.transfunc[(pfx,a)] = eqvgroups[pfx+a][0]
-                    else:
-                        eqvgroups[pfx+a] = list()
-                        eqvgroups[pfx+a].append(pfx+a)
-                        
+                rowstrings[rowstr] = pfx
+        #print(rowstrings)
+        for s, a in itertools.product(self.states, self.alphabet) :
+            for p in self.states :
+                if obtable.rows_agree(s+a, p) :
+                    #print("agree '{}.{}' with '{}'".format(s,a, p))
+                    self.transfunc[(s,a)] = p
+                    break
+            
         for s in self.states :
             if obtable.rows[s][''] == obtable.EXAMPLE_LABEL :
                 self.acceptingStates.add(s)
@@ -212,19 +222,16 @@ class DFA(object):
         obtable = ObservationTable(self.alphabet)
         while True:
             while True :
-                print(obtable)
                 for s, e in obtable.unspecified_pairs() :
                     xclass = input("mq: Is '{}' 1 or 0 ? ".format(s+e))
                     obtable.extend(s+e, xclass)
+                print(obtable)
                 
                 if not obtable.consistent() :
                     ext = obtable.find_inconsistent_extension()
-                    print("obtable is not consistent for "+ext)
+                    print("obtable is not consistent with "+ext)
                     if ext not in obtable.suffixes :
-                        obtable.suffixes.insert(ext)
-                    for s, e in obtable.unspecified_pairs() :
-                        xclass = input("mq: Is '{}' 1 or 0 ? ".format(s+e))
-                        obtable.extend(s+e, xclass)
+                        obtable.add_suffix(ext)
                     continue
                 else:
                     print("obtable is consistent.")
@@ -235,30 +242,20 @@ class DFA(object):
                     if pfx not in obtable.rows :
                         obtable.rows[pfx] = dict()
                     obtable.prefixes.insert(pfx)
-                    for s, e in obtable.unspecified_pairs() :
-                        xclass = input("mq: Is '{}' 1 or 0 ? ".format(s+e))
-                        obtable.extend(s+e, xclass)
                     continue
                 else:
                     print("obtable is closed.")
                 break
-            print(obtable)
             self.define_machine(obtable)
             print(self)
-            cxpair = input("eq: is there a counter-example? ")
+            cxpair = input("eq: is there a counter-example? ") 
             if not cxpair :
                 break
-            cxpair = cxpair.split(',')
-            if self.accept(cxpair[0]) :
-                if len(cxpair) < 2 :
-                    cxpair.append('0') 
-                if cxpair[1] in ('+', '1') :
-                    continue
             else:
-                if len(cxpair) < 2 :
-                    cxpair.append('1') 
-                if cxpair[1] in ('-', '0') :
-                    continue
+                cxpair = cxpair.split(',')
+            if len(cxpair) == 1 :
+                cxpair.append('0' if self.accept(cxpair[0]) else '1')
+            print("counter example: {}, {}".format(cxpair[0],cxpair[1]))
             obtable.extend(cxpair[0], cxpair[1],addprefixes=True)
 
         return 
