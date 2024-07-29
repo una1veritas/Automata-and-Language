@@ -46,6 +46,18 @@ class ObservationTable(object):
     def add_extension(self, sfx):
         self.extensions.add(sfx)
     
+    def add_prefix(self,pfx):
+        self.prefixes.insert(pfx)
+        if pfx not in self.rows:
+            self.rows[pfx] = dict()
+    
+    def add_row(self,pfx):
+        if pfx not in self.rows :
+            self.rows[pfx] = dict()
+    
+    def row(self,pfx):
+        return self.rows[pfx]
+
     def extend(self, xstr, xclass, addprefixes=False):
         if xclass not in ('+', '-','0', '1', 0, 1) :
             print("label error", xclass)
@@ -68,16 +80,16 @@ class ObservationTable(object):
     
     def row_string(self, pfx):
         if pfx in self.rows :
-            result = "".join([str(self.rows[pfx].get(s, ' ')) for s in self.suffixes])
+            result = "".join([str(self.rows[pfx].get(s, '.')) for s in self.suffixes])
             return result
-        return ''.join([' ' for i in self.suffixes])
+        return ''.join(['.' for i in self.suffixes])
 
     def extension_string(self, pfx):
         result = self.row_string(pfx) + " "
         if pfx in self.rows :
-            result += "".join([str(self.rows[pfx].get(s, ' ')) for s in sorted(self.extensions -set(self.suffixes), key=lambda x: (len(x), x))])
+            result += "".join([str(self.rows[pfx].get(s, '.')) for s in sorted(self.extensions -set(self.suffixes), key=lambda x: (len(x), x))])
         else:
-            result += ''.join([' ' for i in sorted(self.extensions -set(self.suffixes), key=lambda x: (len(x), x))])    
+            result += ''.join(['.' for i in sorted(self.extensions -set(self.suffixes), key=lambda x: (len(x), x))])    
         return result
 
     def rows_disagree(self, pfx1, pfx2):
@@ -127,8 +139,10 @@ class ObservationTable(object):
 
     def unspecified_pairs(self):
         res = set()
+        alphexts = sorted(self.alphabet.union(self.suffixes), key = lambda x: (len(x), x))
+        print(self.prefixes, alphexts)
         for p in self.prefixes:
-            for e in self.suffixes:
+            for e in alphexts:
                 if p not in self.rows or e not in self.rows[p]:
                     res.add( (p, e) )
         # for p in self.prefixes:
@@ -230,8 +244,7 @@ class DFA(object):
                 if not obtable.consistent() :
                     ext = obtable.find_inconsistent_extension()
                     print("obtable is not consistent with "+ext)
-                    if ext not in obtable.suffixes :
-                        obtable.add_suffix(ext)
+                    obtable.add_suffix(ext)
                     continue
                 else:
                     print("obtable is consistent.")
@@ -239,9 +252,7 @@ class DFA(object):
                 if not obtable.closed() :
                     pfx = obtable.find_stray_prefix()
                     print("obtabler is not closed with "+ pfx)
-                    if pfx not in obtable.rows :
-                        obtable.rows[pfx] = dict()
-                    obtable.prefixes.insert(pfx)
+                    obtable.add_prefix(pfx)
                     continue
                 else:
                     print("obtable is closed.")
