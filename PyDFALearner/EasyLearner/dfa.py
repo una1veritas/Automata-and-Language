@@ -5,8 +5,6 @@ Created on 2024/06/01
 '''
 import itertools
 from orderedset import OrderedSet
-from pickle import NONE
-from xlwt.BIFFRecords import ContinueRecord
 
 class ObservationTable(object):
     EMPTYSTRING = ''
@@ -26,8 +24,8 @@ class ObservationTable(object):
         self.suffixes.insert(self.EMPTYSTRING)
     
     def __str__(self)->str:
-        result =  "ObservationTable(" + "'" + ''.join(sorted(self.alphabet)) + "', " 
-        result += ", \n"  + str(self.suffixes) + str(sorted(self.extensions - set(self.suffixes), key=lambda x: (len(x),x))) + ",\n"
+        result =  "ObservationTable(" + "'" + ''.join(sorted(self.alphabet)) + "', \n" 
+        result += str(self.suffixes) + str(sorted(self.extensions - set(self.suffixes), key=lambda x: (len(x),x))) + ",\n"
         for pfx in self.prefixes :
             result += " {0:8}| ".format(pfx)
             result += self.extension_string(pfx) + '\n'
@@ -69,12 +67,11 @@ class ObservationTable(object):
         for i in range(0, len(xstr)+1):
             pfx = xstr[:i]
             sfx = xstr[i:]
-            if pfx not in self.rows:
-                self.rows[pfx] = dict()
-            if pfx not in self.prefixes and addprefixes:
-                self.prefixes.insert(pfx)
-            if sfx not in self.extensions:
-                self.extensions.add(sfx)
+            if addprefixes:
+                self.add_prefix(pfx)
+            else:
+                self.add_row(pfx)
+            self.add_extension(sfx)
             self.rows[pfx][sfx] = xclass
 
     
@@ -83,6 +80,7 @@ class ObservationTable(object):
             result = "".join([str(self.rows[pfx].get(s, '.')) for s in self.suffixes])
             return result
         return ''.join(['.' for i in self.suffixes])
+
 
     def extension_string(self, pfx):
         result = self.row_string(pfx) + " "
@@ -140,20 +138,23 @@ class ObservationTable(object):
     def unspecified_pairs(self):
         res = set()
         alphexts = sorted(self.alphabet.union(self.suffixes), key = lambda x: (len(x), x))
-        print(self.prefixes, alphexts)
+        #print(self.prefixes, alphexts)
         for p in self.prefixes:
             for e in alphexts:
                 if p not in self.rows or e not in self.rows[p]:
                     res.add( (p, e) )
-        # for p in self.prefixes:
-        #     for a in self.alphabet:
-        #         if p+a not in self.rows :
-        #             res.add(p+a)
-        print(res)
         return res
     
+    def find_unspecified(self):
+        alphexts = sorted(self.alphabet.union(self.suffixes), key = lambda x: (len(x), x))
+        for p in self.prefixes:
+            for e in alphexts:
+                if p not in self.rows or e not in self.rows[p]:
+                    return p + e
+        return None
+    
     def fullyspecified(self):
-        return not self.unspecified_pairs()
+        return self.find_unspecified == None
     
 class DFA(object):
     '''
@@ -213,6 +214,7 @@ class DFA(object):
         
     def define_machine(self, obtable):
         self.states.clear()
+        self.transfunc.clear()
         self.acceptingStates.clear()
         rowstrings = dict()
         for pfx in obtable.prefixes :
@@ -220,11 +222,9 @@ class DFA(object):
             if rowstr not in rowstrings :
                 self.states.add(pfx)
                 rowstrings[rowstr] = pfx
-        #print(rowstrings)
         for s, a in itertools.product(self.states, self.alphabet) :
             for p in self.states :
                 if obtable.rows_agree(s+a, p) :
-                    #print("agree '{}.{}' with '{}'".format(s,a, p))
                     self.transfunc[(s,a)] = p
                     break
             
@@ -236,23 +236,25 @@ class DFA(object):
         obtable = ObservationTable(self.alphabet)
         while True:
             while True :
-                for s, e in obtable.unspecified_pairs() :
-                    xclass = input("mq: Is '{}' 1 or 0 ? ".format(s+e))
-                    obtable.extend(s+e, xclass)
                 print(obtable)
+                unspec = obtable.find_unspecified()
+                if unspec != None :
+                    xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
+                    obtable.extend(unspec, xclass)
+                    continue
                 
-                if not obtable.consistent() :
-                    ext = obtable.find_inconsistent_extension()
-                    print("obtable is not consistent with "+ext)
+                ext = obtable.find_inconsistent_extension()
+                if ext != None :
                     obtable.add_suffix(ext)
+                    print("obtable is not consistent. adding suffix '{}'".format(ext))
                     continue
                 else:
                     print("obtable is consistent.")
                 
-                if not obtable.closed() :
-                    pfx = obtable.find_stray_prefix()
-                    print("obtabler is not closed with "+ pfx)
+                pfx = obtable.find_stray_prefix()
+                if pfx != None :
                     obtable.add_prefix(pfx)
+                    print("obtable is not closed. adding prefix '{}'".format(pfx) )
                     continue
                 else:
                     print("obtable is closed.")
@@ -268,7 +270,7 @@ class DFA(object):
                 cxpair.append('0' if self.accept(cxpair[0]) else '1')
             print("counter example: {}, {}".format(cxpair[0],cxpair[1]))
             obtable.extend(cxpair[0], cxpair[1],addprefixes=True)
-
+        print(obtable)
         return 
 
     
