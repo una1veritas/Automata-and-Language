@@ -5,7 +5,7 @@ Created on 2024/07/22
 '''
 
 class BTree:
-    SIZE_UPPERBOUND = 3 - 1
+    MIN_CHILDRENS = 2
     
     class Node:
         def __init__(self, data = None, children = None):
@@ -31,7 +31,7 @@ class BTree:
         
         def __repr__(self):
             return str(self.elements) #+ ", " + str(self.children)
-        
+
         def elementcount(self):
             return len(self.elements)
         
@@ -46,7 +46,7 @@ class BTree:
                     if parent.children[i] == self :
                         poshint = i
                         break
-            if poshint + 1 <= parent.elementcount() and parent.children[poshint+1].elementcount() < BTree.SIZE_UPPERBOUND :
+            if poshint + 1 <= parent.elementcount() and BTree.MIN_CHILDRENS - 1 < parent.children[poshint+1].elementcount() < 2*BTree.MIN_CHILDRENS - 1 :
                 return True
             else:
                 return False
@@ -59,7 +59,7 @@ class BTree:
                     if parent.children[i] == self :
                         poshint = i
                         break
-            if poshint > 0 and parent.children[poshint - 1].elementcount() < BTree.SIZE_UPPERBOUND :
+            if poshint > 0 and BTree.MIN_CHILDRENS - 1 < parent.children[poshint - 1].elementcount() < 2*BTree.MIN_CHILDRENS - 1 :
                 return True
             else:
                 return False
@@ -89,7 +89,7 @@ class BTree:
             return ix
         
         def split(self):
-            if self.elementcount() <= BTree.SIZE_UPPERBOUND :
+            if self.elementcount() <= 2 * BTree.MIN_CHILDRENS - 1 :
                 return # nothing is worng.
             ix = self.elementcount() >> 1
             goesup = self.elements[ix]
@@ -131,9 +131,10 @@ class BTree:
                 nephew = self.children.pop(0)
                 lsibling.children.append(nephew)
 
-    def __init__(self, key= lambda x: x):
+    def __init__(self, key= lambda x: x, minsize = 2):
         self.root = None
         self.sortkey = key
+        self.MIN_CHILDRENS = minsize
         self.count = 0
     
     def __str__(self):
@@ -203,7 +204,7 @@ class BTree:
         # node must be a leaf.
         node.elements.insert(position, data)
         self.count += 1
-        while node.elementcount() > self.SIZE_UPPERBOUND :
+        while node.elementcount() > 2 * self.MIN_CHILDRENS - 1:
             #print("path = ", path)
             #print("temporarily over sized node = ", node)
             if len(path) == 0 :

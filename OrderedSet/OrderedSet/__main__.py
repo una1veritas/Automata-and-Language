@@ -8,7 +8,7 @@ import sys
 from orderedset import OrderedSet
 from btreeset import BTree
 
-t = BTree()
+t = BTree(minsize=2)
 for d in sys.argv[1:] :
     print("inserting ", d)
     t.insert(d)
