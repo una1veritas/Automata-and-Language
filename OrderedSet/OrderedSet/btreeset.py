@@ -5,7 +5,18 @@ Created on 2024/07/22
 '''
 
 class BTree:
-    MIN_CHILDRENS = 2
+    
+    def __init__(self, key= lambda x: x, minsize = 2):
+        self.root = None
+        self.sortkey = key
+        self.MIN_CHILDREN_COUNT = max(minsize, 2)
+        self.count = 0
+    
+    def min_keycount(self):
+        return self.MIN_CHILDREN_COUNT - 1
+    
+    def max_keycount(self):
+        return (self.MIN_CHILDREN_COUNT << 1) - 1
     
     class Node:
         def __init__(self, data = None, children = None):
@@ -46,7 +57,7 @@ class BTree:
                     if parent.children[i] == self :
                         poshint = i
                         break
-            if poshint + 1 <= parent.elementcount() and BTree.MIN_CHILDRENS - 1 < parent.children[poshint+1].elementcount() < 2*BTree.MIN_CHILDRENS - 1 :
+            if poshint + 1 <= parent.elementcount() and BTree.min_keycount(self) < parent.children[poshint+1].elementcount() < BTree.max_keycount(self) :
                 return True
             else:
                 return False
@@ -59,7 +70,7 @@ class BTree:
                     if parent.children[i] == self :
                         poshint = i
                         break
-            if poshint > 0 and BTree.MIN_CHILDRENS - 1 < parent.children[poshint - 1].elementcount() < 2*BTree.MIN_CHILDRENS - 1 :
+            if poshint > 0 and BTree.MIN_KEY_COUNT < parent.children[poshint - 1].elementcount() < BTree.MAX_KEY_COUNT :
                 return True
             else:
                 return False
@@ -89,7 +100,7 @@ class BTree:
             return ix
         
         def split(self):
-            if self.elementcount() <= 2 * BTree.MIN_CHILDRENS - 1 :
+            if self.elementcount() <= self.max_keycount() :
                 return # nothing is worng.
             ix = self.elementcount() >> 1
             goesup = self.elements[ix]
@@ -131,12 +142,6 @@ class BTree:
                 nephew = self.children.pop(0)
                 lsibling.children.append(nephew)
 
-    def __init__(self, key= lambda x: x, minsize = 2):
-        self.root = None
-        self.sortkey = key
-        self.MIN_CHILDRENS = minsize
-        self.count = 0
-    
     def __str__(self):
         return "BTree"+str(self.root)
     
@@ -204,7 +209,7 @@ class BTree:
         # node must be a leaf.
         node.elements.insert(position, data)
         self.count += 1
-        while node.elementcount() > 2 * self.MIN_CHILDRENS - 1:
+        while node.elementcount() > self.max_keycount():
             #print("path = ", path)
             #print("temporarily over sized node = ", node)
             if len(path) == 0 :
