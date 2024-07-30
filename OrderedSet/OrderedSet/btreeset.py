@@ -5,18 +5,19 @@ Created on 2024/07/22
 '''
 
 class BTree:
+    MIN_CHILDREN_COUNT = 2
     
     def __init__(self, key= lambda x: x, minsize = 2):
         self.root = None
         self.sortkey = key
-        self.MIN_CHILDREN_COUNT = max(minsize, 2)
+        self.min_children = max(minsize, self.MIN_CHILDREN_COUNT)
         self.count = 0
     
     def min_keycount(self):
-        return self.MIN_CHILDREN_COUNT - 1
+        return self.min_children - 1
     
     def max_keycount(self):
-        return (self.MIN_CHILDREN_COUNT << 1) - 1
+        return (self.min_children << 1) - 1
     
     class Node:
         def __init__(self, data = None, children = None):
@@ -48,33 +49,7 @@ class BTree:
         
         def is_leaf(self):
             return self.children == None
-        
-        def has_rightsibling(self, parent, poshint = None, data=None):
-            if poshint == None and data != None:
-                poshint = parent.find_path(data)
-            elif poshint == None and data == None :
-                for i in range(parent.elementcount()+1) :
-                    if parent.children[i] == self :
-                        poshint = i
-                        break
-            if poshint + 1 <= parent.elementcount() and BTree.min_keycount(self) < parent.children[poshint+1].elementcount() < BTree.max_keycount(self) :
-                return True
-            else:
-                return False
-                
-        def has_leftsibling(self, parent, poshint = None, data=None):
-            if poshint == None and data != None:
-                poshint = parent.find_path(data)
-            elif poshint == None and data == None :
-                for i in range(parent.elementcount()+1) :
-                    if parent.children[i] == self :
-                        poshint = i
-                        break
-            if poshint > 0 and BTree.MIN_KEY_COUNT < parent.children[poshint - 1].elementcount() < BTree.MAX_KEY_COUNT :
-                return True
-            else:
-                return False
-                
+                        
         def lower_bound(self, elem, key):
             # print()
             ridx = self.elementcount()
@@ -100,8 +75,6 @@ class BTree:
             return ix
         
         def split(self):
-            if self.elementcount() <= self.max_keycount() :
-                return # nothing is worng.
             ix = self.elementcount() >> 1
             goesup = self.elements[ix]
             rsibling = BTree.Node()
@@ -179,6 +152,33 @@ class BTree:
         path = self.find_path(data)
         return path[-1][0].elements[path[-1][1]] == data
     
+    def node_has_rightsibling(self, node, parent, poshint = None, data=None):
+        if poshint == None and data != None:
+            poshint = parent.find_path(data)
+        elif poshint == None and data == None :
+            for i in range(parent.elementcount()+1) :
+                if parent.children[i] == node :
+                    poshint = i
+                    break
+        if poshint + 1 <= parent.elementcount() and \
+        self.min_keycount() < parent.children[poshint+1].elementcount() < self.max_keycount() :
+            return True
+        else:
+            return False
+            
+    def node_has_leftsibling(self, node, parent, poshint = None, data=None):
+        if poshint == None and data != None:
+            poshint = parent.find_path(data)
+        elif poshint == None and data == None :
+            for i in range(parent.elementcount()+1) :
+                if parent.children[i] == node :
+                    poshint = i
+                    break
+        if poshint > 0 and self.min_keycount() < parent.children[poshint - 1].elementcount() < self.max_keycount() :
+            return True
+        else:
+            return False
+    
     def find_path(self, data):
         path = [[self.root, None]]
         while True:
@@ -224,11 +224,11 @@ class BTree:
                 parent, ppos = path[-1]
                 #print("path=",path)
                 #print("parent = ", parent, " node = ", node)
-                if node.has_rightsibling(parent, ppos) :
+                if node.has_rightsibling(parent, self, ppos) :
                     ''' has only left siblings '''
                     node.rotate_right(parent,ppos)
                     break
-                elif node.has_leftsibling(parent, ppos):
+                elif node.has_leftsibling(parent, self, ppos):
                     ''' must have right siblings '''
                     #print("rotate left")
                     node.rotate_left(parent, ppos)
