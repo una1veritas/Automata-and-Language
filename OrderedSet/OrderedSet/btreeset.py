@@ -5,18 +5,19 @@ Created on 2024/07/22
 '''
 
 class BTree:
+    MIN_CHILDREN_COUNT = 2
     
     def __init__(self, key= lambda x: x, minsize = 2):
         self.root = None
         self.sortkey = key
-        self.MIN_CHILDREN_COUNT = max(minsize, 2)
+        self.min_children = max(minsize, self.MIN_CHILDREN_COUNT)
         self.count = 0
     
     def min_keycount(self):
-        return self.MIN_CHILDREN_COUNT - 1
+        return self.min_children - 1
     
     def max_keycount(self):
-        return (self.MIN_CHILDREN_COUNT << 1) - 1
+        return (self.min_children << 1) - 1
     
     class Node:
         def __init__(self, data = None, children = None):
@@ -178,6 +179,33 @@ class BTree:
     def __contains__(self, data) -> bool :
         path = self.find_path(data)
         return path[-1][0].elements[path[-1][1]] == data
+    
+    def node_has_rightsibling(self, node, parent, poshint = None, data=None):
+        if poshint == None and data != None:
+            poshint = parent.find_path(data)
+        elif poshint == None and data == None :
+            for i in range(parent.elementcount()+1) :
+                if parent.children[i] == node :
+                    poshint = i
+                    break
+        if poshint + 1 <= parent.elementcount() and \
+        self.min_keycount() < parent.children[poshint+1].elementcount() < self.max_keycount() :
+            return True
+        else:
+            return False
+            
+    def node_has_leftsibling(self, node, parent, poshint = None, data=None):
+        if poshint == None and data != None:
+            poshint = parent.find_path(data)
+        elif poshint == None and data == None :
+            for i in range(parent.elementcount()+1) :
+                if parent.children[i] == node :
+                    poshint = i
+                    break
+        if poshint > 0 and self.min_keycount() < parent.children[poshint - 1].elementcount() < self.max_keycount() :
+            return True
+        else:
+            return False
     
     def find_path(self, data):
         path = [[self.root, None]]
