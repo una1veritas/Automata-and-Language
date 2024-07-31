@@ -49,31 +49,33 @@ class BTree:
         def is_leaf(self):
             return self.children == None
         
-        def has_rightsibling(self, parent, poshint = None, data=None):
-            if poshint == None and data != None:
-                poshint = parent.find_path(data)
-            elif poshint == None and data == None :
-                for i in range(parent.elementcount()+1) :
+        def right_sibling(self, parent, poshint = None):
+            if poshint == None or \
+            (0 <= poshint < parent.elementcount() and parent.children[poshint] != self) :
+                for i in range(parent.elementcount()) :
                     if parent.children[i] == self :
-                        poshint = i
-                        break
-            if poshint + 1 <= parent.elementcount() and BTree.min_keycount(self) < parent.children[poshint+1].elementcount() < BTree.max_keycount(self) :
-                return True
+                        return parent.children[i+1]
+                else:
+                    return None
             else:
-                return False
+                if 0 <= poshint < parent.elementcount() :
+                    return parent.children[poshint+1]
+                else:
+                    return None
                 
-        def has_leftsibling(self, parent, poshint = None, data=None):
-            if poshint == None and data != None:
-                poshint = parent.find_path(data)
-            elif poshint == None and data == None :
-                for i in range(parent.elementcount()+1) :
+        def left_sibling(self, parent, poshint = None):
+            if poshint == None or \
+            (0 < poshint <= parent.elementcount() and parent.children[poshint] != self) :
+                for i in range(1, parent.elementcount() + 1) :
                     if parent.children[i] == self :
-                        poshint = i
-                        break
-            if poshint > 0 and BTree.MIN_KEY_COUNT < parent.children[poshint - 1].elementcount() < BTree.MAX_KEY_COUNT :
-                return True
+                        return parent.children[i-1]
+                else:
+                    return None
             else:
-                return False
+                if 0 < poshint <= parent.elementcount() :
+                    return parent.children[poshint-1]
+                else:
+                    return None
                 
         def lower_bound(self, elem, key):
             # print()
@@ -100,8 +102,6 @@ class BTree:
             return ix
         
         def split(self):
-            if self.elementcount() <= self.max_keycount() :
-                return # nothing is worng.
             ix = self.elementcount() >> 1
             goesup = self.elements[ix]
             rsibling = BTree.Node()
@@ -213,7 +213,7 @@ class BTree:
             #print("path = ", path)
             #print("temporarily over sized node = ", node)
             if len(path) == 0 :
-                # the node is the root
+                ''' the node is the root '''
                 #print("the node is the root.", node)
                 updata, left, right = node.split()
                 #print("updata = ", updata, "left = ", left, "right = ", right)
@@ -224,13 +224,12 @@ class BTree:
                 parent, ppos = path[-1]
                 #print("path=",path)
                 #print("parent = ", parent, " node = ", node)
-                if node.has_rightsibling(parent, ppos) :
-                    ''' has only left siblings '''
+                rs = node.right_sibling(parent, ppos) 
+                if rs != None and rs.elementcount() < self.max_keycount() :
                     node.rotate_right(parent,ppos)
                     break
-                elif node.has_leftsibling(parent, ppos):
-                    ''' must have right siblings '''
-                    #print("rotate left")
+                ls = node.left_sibling(parent, ppos)
+                if ls != None and ls.elementcount() < self.max_keycount() :
                     node.rotate_left(parent, ppos)
                     break
                 else:
