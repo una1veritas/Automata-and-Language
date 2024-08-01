@@ -165,6 +165,12 @@ class ObservationTable(object):
                     return px + e
         return None
     
+    def find_undecided(self):
+        for px in self.prefixes:
+            if self.EMPTYSTRING not in self.rows[px] :
+                return px
+        return None
+    
     def fullyspecified(self):
         return self.find_unspecified == None
     
@@ -250,6 +256,7 @@ class DFA(object):
         while True:
             while True :
                 print(obtable)
+                
                 unspec = obtable.find_unspecified()
                 if unspec != None :
                     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
@@ -271,6 +278,13 @@ class DFA(object):
                     continue
                 else:
                     print("obtable is closed.")
+                
+                # udpfx = obtable.find_undecided()
+                # if udpfx != None :
+                #     xclass = input("mq undecided: Is '{}' 1 or 0 ? ".format(udpfx))
+                #     obtable.fill(udpfx, xclass)
+                #     continue
+                    
                 break
             self.define_machine(obtable)
             print(self)
