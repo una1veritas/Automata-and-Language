@@ -8,21 +8,7 @@ import sys
 from dfa import DFA
 
 if __name__ == '__main__':
-    examples = list()
-    #print(sys.argv)
-    # if len(sys.argv) == 1 :
-    #     print('examples requested.')
-    #     exit(1)
-    # elif len(sys.argv) == 2 :
-    #     for pair in sys.argv[1].split(' ') :
-    #         exstr, exclass = pair.split(',')
-    #         examples.append( (exstr, exclass) )
-    # else:
-    #     for pair in sys.argv[1:] :
-    #         exstr, exclass = pair.split(',')
-    #         examples.append( (exstr, exclass) )
-    # print("Given examples: ", examples)
-    
+    '''有限アルファベットのみを定義'''
     dfa1 = DFA("ab")
 
     dfa1.learn_by_mat()

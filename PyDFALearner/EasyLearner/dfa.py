@@ -11,13 +11,24 @@ class ObservationTable(object):
     EXAMPLE_LABEL = 1
     COUNTEREXAMPLE_LABEL = 0
     
+    '''空の observation table を作る．有限アルファベットは与える．'''
     def __init__(self, finitealphabet):
         self.alphabet = set(finitealphabet)
         self.rows = dict()
         self.prefixes = OrderedSet(key=lambda x: (len(x), x))
         self.suffixes = OrderedSet(key=lambda x: (len(x), x))
         self.extensions = set()
-        
+        '''
+        OrderedSet   --- 自作の，二分探索法を使った集合．要素がソート済みになっている．
+        self.alphabet --- 有限アルファベット．'' から 1 文字拡張する際に既知である必要がある. 
+        self.rows     --- 行辞書の集まり，表（の中身，ます）
+        self.prefixes --- 接頭辞の集合 S. なお S の要素と文字を連結した拡張接頭辞は，
+        self.row （の見出し self.row.keys() ）には含まれるが，self.prefixes には含まれない．
+        self.suffixes   --- 接尾辞の集合 E.
+        self.extensions --- 接尾辞の集合 E にはふくめないが，ある行についてすでに既知となった
+        （ますが埋まった）接尾辞の集合．self.suffixes には含まれないが，
+        self.row[s][x] が登録ずみの文字列 x. Angluin '87 にはないもの．
+        '''
         self.prefixes.insert(self.EMPTYSTRING)
         self.rows[self.EMPTYSTRING] = dict()
         self.extensions.add(self.EMPTYSTRING)
@@ -55,8 +66,10 @@ class ObservationTable(object):
     
     def row(self,pfx):
         return self.rows[pfx]
-
-    def extend(self, xstr, xclass, addprefixes=False):
+    
+    '''例を使って表の空欄を埋める. '''
+    '''addprefixes == True ならば，例から生じる接頭辞すべてを prefixes に登録する'''
+    def fill(self, xstr, xclass, addprefixes=False):
         if xclass not in ('+', '-','0', '1', 0, 1) :
             print("label error", xclass)
             return 
@@ -146,11 +159,10 @@ class ObservationTable(object):
         return res
     
     def find_unspecified(self):
-        alphexts = sorted(self.alphabet.union(self.suffixes), key = lambda x: (len(x), x))
-        for p in self.prefixes:
-            for e in alphexts:
-                if p not in self.rows or e not in self.rows[p]:
-                    return p + e
+        for px in self.prefixes.union([ p + a for p, a in itertools.product(self.prefixes, self.alphabet)]):
+            for e in self.suffixes:
+                if px not in self.rows or e not in self.rows[px]:
+                    return px + e
         return None
     
     def fullyspecified(self):
@@ -188,7 +200,7 @@ class DFA(object):
         return "DFA(alphabet = {" + ', '.join(sorted(self.alphabet)) + "}, \n states = {" \
             + ', '.join([ s if len(s) > 0 else "'"+s+"'" for s in sorted(self.states)]) + "}, \n initial = '" + str(self.initialState) + "', \n" \
             + " transition = {" + ", ".join(["{} -> '{}'".format(k, v) for k, v in self.transfunc.items()]) \
-            + "}, \n finals = " + str(self.acceptingStates) + ")"
+            + "}, \n finals = {" + ", ".join(["'"+s+"'" for s in self.acceptingStates]) + "}" +  ")"
         
     def initiate(self):
         self.current = self.initialState
@@ -230,6 +242,7 @@ class DFA(object):
             
         for s in self.states :
             if obtable.rows[s][''] == obtable.EXAMPLE_LABEL :
+                print("add final ", s)
                 self.acceptingStates.add(s)
         
     def learn_by_mat(self):
@@ -240,7 +253,7 @@ class DFA(object):
                 unspec = obtable.find_unspecified()
                 if unspec != None :
                     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
-                    obtable.extend(unspec, xclass)
+                    obtable.fill(unspec, xclass)
                     continue
                 
                 ext = obtable.find_inconsistent_extension()
@@ -269,7 +282,7 @@ class DFA(object):
             if len(cxpair) == 1 :
                 cxpair.append('0' if self.accept(cxpair[0]) else '1')
             print("counter example: {}, {}".format(cxpair[0],cxpair[1]))
-            obtable.extend(cxpair[0], cxpair[1],addprefixes=True)
+            obtable.fill(cxpair[0], cxpair[1],addprefixes=True)
         print(obtable)
         return 
 

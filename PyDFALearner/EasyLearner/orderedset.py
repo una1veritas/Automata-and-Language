@@ -7,8 +7,12 @@ class OrderedSet(object):
         self.elements = list()
         self.sortkey = key
         if collection is not None :
-            self.insert_all(collection)
-    
+            if isinstance(collection, (set, list, tuple)) :
+                self.insert_all(collection)
+            elif isinstance(collection, OrderedSet) :
+                self.elements = collection.elements.copy()
+                self.sortkey = collection.sortkey
+                
     def __str__(self)->str:
         return str(self.elements)
 
@@ -54,6 +58,13 @@ class OrderedSet(object):
             #     print("bug!!!")
             #     break
         return ridx
+    
+    def union(self, another):
+        if isinstance(another, (set, list, tuple)) :
+            os = OrderedSet(self)
+            os.insert_all(another)
+            return os
+        raise ValueError("OrderedSet union: Error, the argument is neither set, list nor tuple.")
     
     def insert(self, elem):
         idx = self.lower_bound(elem) #bisect.bisect_left(self.elements, elem, key=self.sortkey)
