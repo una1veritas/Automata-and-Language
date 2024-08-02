@@ -86,14 +86,12 @@ class ObservationTable(object):
                 self.add_row(pfx)
             self.add_extension(sfx)
             self.rows[pfx][sfx] = xclass
-
     
     def row_string(self, pfx):
         if pfx in self.rows :
             result = "".join([str(self.rows[pfx].get(s, '.')) for s in self.suffixes])
             return result
         return ''.join(['.' for i in self.suffixes])
-
 
     def extension_string(self, pfx):
         result = self.row_string(pfx) + " "
@@ -125,7 +123,7 @@ class ObservationTable(object):
                 if self.rows_agree(pfx, t) :
                     break
             else:
-                #print("has no agreeing prefix")
+                print("has no agreeing prefix", pfx, t)
                 return t
         return None
         
@@ -159,10 +157,15 @@ class ObservationTable(object):
         return res
     
     def find_unspecified(self):
-        for px in self.prefixes.union([ p + a for p, a in itertools.product(self.prefixes, self.alphabet)]):
-            for e in self.suffixes:
-                if px not in self.rows or e not in self.rows[px]:
-                    return px + e
+        for px, e in itertools.product(self.prefixes, self.suffixes) :
+            if px not in self.rows or e not in self.rows[px]:
+                return px + e
+        for px, a in itertools.product(self.prefixes, self.alphabet):
+            if px + a not in self.prefixes:
+                for e in self.suffixes:
+                    if px + a not in self.rows or e not in self.rows[px+a]:
+                        return px + a + e
+                    
         return None
     
     def find_undecided(self):
@@ -203,10 +206,11 @@ class DFA(object):
         self.current = self.initialState
         
     def __str__(self):
+        maxlen = max([len(s) for s in self.states])
         return "DFA(alphabet = {" + ', '.join(sorted(self.alphabet)) + "}, \n states = {" \
             + ', '.join([ s if len(s) > 0 else "'"+s+"'" for s in sorted(self.states)]) + "}, \n initial = '" + str(self.initialState) + "', \n" \
-            + " transition = {" + ", ".join(["{} -> '{}'".format(k, v) for k, v in self.transfunc.items()]) \
-            + "}, \n finals = {" + ", ".join(["'"+s+"'" for s in self.acceptingStates]) + "}" +  ")"
+            + " transition = {\n" + "\n".join(["{0:{wdth}} | {1} | {2}".format(k[0] if len(k[0]) else "''", k[1], v if len(v) else "''", wdth=maxlen) for k, v in self.transfunc.items()]) \
+            + "\n}, \n finals = {" + ", ".join(["'"+s+"'" for s in self.acceptingStates]) + "}" +  ")"
         
     def initiate(self):
         self.current = self.initialState
@@ -245,47 +249,41 @@ class DFA(object):
                 if obtable.rows_agree(s+a, p) :
                     self.transfunc[(s,a)] = p
                     break
+            else:
+                raise ValueError("no dest state "+str((s,a)))
             
         for s in self.states :
-            if obtable.rows[s][''] == obtable.EXAMPLE_LABEL :
-                print("add final ", s)
+            if obtable.EMPTYSTRING in obtable.rows[s] and obtable.rows[s][obtable.EMPTYSTRING] == obtable.EXAMPLE_LABEL :
+                #print("add final ", s)
                 self.acceptingStates.add(s)
         
     def learn_by_mat(self):
         obtable = ObservationTable(self.alphabet)
         while True:
-            while True :
+            ext = None
+            pfx = None
+            unspec = None
+            while (ext := obtable.find_inconsistent_extension()) != None or (pfx := obtable.find_stray_prefix()) != None :
                 print(obtable)
                 
-                unspec = obtable.find_unspecified()
-                if unspec != None :
-                    xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
-                    obtable.fill(unspec, xclass)
-                    continue
-                
-                ext = obtable.find_inconsistent_extension()
-                if ext != None :
+                if  ext != None :
                     obtable.add_suffix(ext)
                     print("obtable is not consistent. adding suffix '{}'".format(ext))
-                    continue
+                    #continue
                 else:
                     print("obtable is consistent.")
                 
-                pfx = obtable.find_stray_prefix()
                 if pfx != None :
                     obtable.add_prefix(pfx)
                     print("obtable is not closed. adding prefix '{}'".format(pfx) )
-                    continue
+                    #continue
                 else:
                     print("obtable is closed.")
                 
-                # udpfx = obtable.find_undecided()
-                # if udpfx != None :
-                #     xclass = input("mq undecided: Is '{}' 1 or 0 ? ".format(udpfx))
-                #     obtable.fill(udpfx, xclass)
-                #     continue
-                    
-                break
+                while (unspec := obtable.find_unspecified()) != None :
+                    xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
+                    obtable.fill(unspec, xclass)
+            
             self.define_machine(obtable)
             print(self)
             cxpair = input("eq: is there a counter-example? ") 
@@ -297,6 +295,9 @@ class DFA(object):
                 cxpair.append('0' if self.accept(cxpair[0]) else '1')
             print("counter example: {}, {}".format(cxpair[0],cxpair[1]))
             obtable.fill(cxpair[0], cxpair[1],addprefixes=True)
+            while (unspec := obtable.find_unspecified()) != None :
+                xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
+                obtable.fill(unspec, xclass)
         print(obtable)
         return 
 
