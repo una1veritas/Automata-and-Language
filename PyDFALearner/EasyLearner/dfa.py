@@ -37,14 +37,23 @@ class ObservationTable(object):
     def __str__(self)->str:
         result =  "ObservationTable(" + "'" + ''.join(sorted(self.alphabet)) + "', \n" 
         result += str(self.suffixes) + str(sorted(self.extensions - set(self.suffixes), key=lambda x: (len(x),x))) + ",\n"
+        printedpfx = set()
         for pfx in self.prefixes :
             result += " {0:8}| ".format(pfx)
             result += self.extension_string(pfx) + '\n'
+            printedpfx.add(pfx)
         result += "--------\n"
         for pfx, a in itertools.product(self.prefixes, self.alphabet) :
             if pfx+a not in self.prefixes :
                 result += " {0:8}| ".format(pfx+a)
                 result += self.extension_string(pfx+a) + '\n'
+            printedpfx.add(pfx+a)
+        result += "========\n"
+        for pfx in self.rows :
+            if pfx in printedpfx :
+                continue
+            result += " {0:8}| ".format(pfx)
+            result += self.extension_string(pfx) + '\n'
         result += "])"
         return result
     
@@ -65,7 +74,10 @@ class ObservationTable(object):
             self.rows[pfx] = dict()
     
     def row(self,pfx):
-        return self.rows[pfx]
+        return self.rows.get(pfx, dict())
+    
+    # def table(self, xs):
+    #     return self.rows[self.EMPTYSTRING].get(xs,None)
     
     '''例を使って表の空欄を埋める. '''
     '''addprefixes == True ならば，例から生じる接頭辞すべてを prefixes に登録する'''
@@ -82,8 +94,9 @@ class ObservationTable(object):
             sfx = xstr[i:]
             if addprefixes:
                 self.add_prefix(pfx)
-            else:
+            elif pfx not in self.rows:
                 self.add_row(pfx)
+                #print("added to rows", pfx,self.rows.keys())
             self.add_extension(sfx)
             self.rows[pfx][sfx] = xclass
     
@@ -131,11 +144,11 @@ class ObservationTable(object):
         for s1, s2 in itertools.product(self.prefixes, self.prefixes) :
             if s1 >= s2:
                 continue
-            print(s1,s2,self.row_string(s1), self.row_string(s2))
+            #print(s1,s2,self.row_string(s1), self.row_string(s2))
             if self.rows_agree(s1, s2) :
                #print("consistency chk:")
                 for a in self.alphabet :
-                    print("{}, {}, +{}; {}/{} -> {},{}".format(s1,s2,a,self.row_string(s1), self.row_string(s2),self.row_string(s1+a), self.row_string(s2+a)))
+                    #print("{}, {}, +{}; {}/{} -> {},{}".format(s1,s2,a,self.row_string(s1), self.row_string(s2),self.row_string(s1+a), self.row_string(s2+a)))
                     ext = self.rows_disagree(s1+a, s2+a)
                     if ext != None :
                         return a + ext
@@ -161,11 +174,13 @@ class ObservationTable(object):
     def find_unspecified(self):
         for px, e in itertools.product(self.prefixes, self.suffixes) :
             if px not in self.rows or e not in self.rows[px]:
+                print("as px + e", px)
                 return px + e
         for px, a in itertools.product(self.prefixes, self.alphabet):
             if px + a not in self.prefixes:
                 for e in self.suffixes:
                     if px + a not in self.rows or e not in self.rows[px+a]:
+                        print("as px + a + e", px)
                         return px + a + e
                     
         return None
@@ -267,31 +282,32 @@ class DFA(object):
             unspec = None
             while (ext := obtable.find_inconsistent_extension()) != None or (pfx := obtable.find_stray_prefix()) != None \
             or (unspec := obtable.find_unspecified()) != None :
-
                 print(obtable)
                 
                 if  ext != None :
                     obtable.add_suffix(ext)
                     print("obtable is not consistent. adding suffix '{}'".format(ext))
-                    #continue
+                    continue
                 else:
                     print("obtable is consistent.")
                 
                 if pfx != None :
                     obtable.add_prefix(pfx)
                     print("obtable is not closed. adding prefix '{}'".format(pfx) )
-                    #continue
+                    continue
                 else:
                     print("obtable is closed.")
+                
                 if ext == None and pfx == None :
-                    break
                     self.define_machine(obtable)
                     print(self)
 
+                print(obtable)
                 if unspec != None :
                     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
                     obtable.fill(unspec, xclass)
-            
+
+            print(obtable)
             self.define_machine(obtable)
             print(self)
             cxpair = input("eq: is there a counter-example? ") 
