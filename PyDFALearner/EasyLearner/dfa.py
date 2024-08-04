@@ -36,24 +36,25 @@ class ObservationTable(object):
     
     def __str__(self)->str:
         result =  "ObservationTable(" + "'" + ''.join(sorted(self.alphabet)) + "', \n" 
-        result += str(self.suffixes) + str(sorted(self.extensions - set(self.suffixes), key=lambda x: (len(x),x))) + ",\n"
+        ext_suffixes = [sfx for sfx in sorted(self.extensions, key=lambda x: (len(x),x)) if sfx not in self.suffixes] 
+        result += str(self.suffixes) + ",\n"
         printedpfx = set()
         for pfx in self.prefixes :
             result += " {0:8}| ".format(pfx)
-            result += self.extension_string(pfx) + '\n'
+            result += self.row_string(pfx) + '\n'
             printedpfx.add(pfx)
         result += "--------\n"
         for pfx, a in itertools.product(self.prefixes, self.alphabet) :
             if pfx+a not in self.prefixes :
                 result += " {0:8}| ".format(pfx+a)
-                result += self.extension_string(pfx+a) + '\n'
+                result += self.row_string(pfx+a) + '\n'
             printedpfx.add(pfx+a)
-        result += "========\n"
-        for pfx in self.rows :
-            if pfx in printedpfx :
-                continue
-            result += " {0:8}| ".format(pfx)
-            result += self.extension_string(pfx) + '\n'
+        # result += "========\n"
+        # for pfx in self.rows :
+        #     if pfx in printedpfx :
+        #         continue
+        #     result += " {0:8}| ".format(pfx)
+        #     result += self.extension_string(pfx) + '\n'
         result += "])"
         return result
     
@@ -174,13 +175,13 @@ class ObservationTable(object):
     def find_unspecified(self):
         for px, e in itertools.product(self.prefixes, self.suffixes) :
             if px not in self.rows or e not in self.rows[px]:
-                print("as px + e", px)
+                #print("as px + e", px)
                 return px + e
         for px, a in itertools.product(self.prefixes, self.alphabet):
             if px + a not in self.prefixes:
                 for e in self.suffixes:
                     if px + a not in self.rows or e not in self.rows[px+a]:
-                        print("as px + a + e", px)
+                        #print("as px + a + e", px)
                         return px + a + e
                     
         return None
@@ -280,10 +281,9 @@ class DFA(object):
             ext = None
             pfx = None
             unspec = None
-            while (ext := obtable.find_inconsistent_extension()) != None or (pfx := obtable.find_stray_prefix()) != None \
-            or (unspec := obtable.find_unspecified()) != None :
-                print(obtable)
-                
+            while (ext := obtable.find_inconsistent_extension()) != None \
+            or (pfx := obtable.find_stray_prefix()) != None \
+            or (unspec := obtable.find_unspecified()) != None :                
                 if  ext != None :
                     obtable.add_suffix(ext)
                     print("obtable is not consistent. adding suffix '{}'".format(ext))
@@ -298,16 +298,15 @@ class DFA(object):
                 else:
                     print("obtable is closed.")
                 
-                if ext == None and pfx == None :
-                    self.define_machine(obtable)
-                    print(self)
+                # if ext == None and pfx == None :
+                #     self.define_machine(obtable)
+                #     print(self)
 
                 print(obtable)
                 if unspec != None :
                     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
                     obtable.fill(unspec, xclass)
 
-            print(obtable)
             self.define_machine(obtable)
             print(self)
             cxpair = input("eq: is there a counter-example? ") 
@@ -322,7 +321,7 @@ class DFA(object):
             # while (unspec := obtable.find_unspecified()) != None :
             #     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
             #     obtable.fill(unspec, xclass)
-        print(obtable)
+            print(obtable)
         return 
 
     
