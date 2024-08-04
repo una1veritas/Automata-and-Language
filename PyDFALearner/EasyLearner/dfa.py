@@ -131,9 +131,11 @@ class ObservationTable(object):
         for s1, s2 in itertools.product(self.prefixes, self.prefixes) :
             if s1 >= s2:
                 continue
+            print(s1,s2,self.row_string(s1), self.row_string(s2))
             if self.rows_agree(s1, s2) :
                #print("consistency chk:")
                 for a in self.alphabet :
+                    print("{}, {}, +{}; {}/{} -> {},{}".format(s1,s2,a,self.row_string(s1), self.row_string(s2),self.row_string(s1+a), self.row_string(s2+a)))
                     ext = self.rows_disagree(s1+a, s2+a)
                     if ext != None :
                         return a + ext
@@ -209,7 +211,7 @@ class DFA(object):
         maxlen = max([len(s) for s in self.states])
         return "DFA(alphabet = {" + ', '.join(sorted(self.alphabet)) + "}, \n states = {" \
             + ', '.join([ s if len(s) > 0 else "'"+s+"'" for s in sorted(self.states)]) + "}, \n initial = '" + str(self.initialState) + "', \n" \
-            + " transition = {\n" + "\n".join(["{0:{wdth}} | {1} | {2}".format(k[0] if len(k[0]) else "''", k[1], v if len(v) else "''", wdth=maxlen) for k, v in self.transfunc.items()]) \
+            + " transition = {\n" + "\n".join(["{0:{wdth}} | {1} | {2}".format(k[0] if len(k[0]) else "''", k[1], self.transfunc[k] if len(self.transfunc[k]) else "''", wdth=maxlen) for k in sorted(self.transfunc.keys())]) \
             + "\n}, \n finals = {" + ", ".join(["'"+s+"'" for s in self.acceptingStates]) + "}" +  ")"
         
     def initiate(self):
@@ -263,7 +265,9 @@ class DFA(object):
             ext = None
             pfx = None
             unspec = None
-            while (ext := obtable.find_inconsistent_extension()) != None or (pfx := obtable.find_stray_prefix()) != None :
+            while (ext := obtable.find_inconsistent_extension()) != None or (pfx := obtable.find_stray_prefix()) != None \
+            or (unspec := obtable.find_unspecified()) != None :
+
                 print(obtable)
                 
                 if  ext != None :
@@ -279,8 +283,12 @@ class DFA(object):
                     #continue
                 else:
                     print("obtable is closed.")
-                
-                while (unspec := obtable.find_unspecified()) != None :
+                if ext == None and pfx == None :
+                    break
+                    self.define_machine(obtable)
+                    print(self)
+
+                if unspec != None :
                     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
                     obtable.fill(unspec, xclass)
             
@@ -295,9 +303,9 @@ class DFA(object):
                 cxpair.append('0' if self.accept(cxpair[0]) else '1')
             print("counter example: {}, {}".format(cxpair[0],cxpair[1]))
             obtable.fill(cxpair[0], cxpair[1],addprefixes=True)
-            while (unspec := obtable.find_unspecified()) != None :
-                xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
-                obtable.fill(unspec, xclass)
+            # while (unspec := obtable.find_unspecified()) != None :
+            #     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
+            #     obtable.fill(unspec, xclass)
         print(obtable)
         return 
 
