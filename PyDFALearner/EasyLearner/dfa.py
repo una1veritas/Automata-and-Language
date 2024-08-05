@@ -128,7 +128,7 @@ class ObservationTable(object):
     def rows_agree(self, pfx1, pfx2):
         return self.rows_disagree(pfx1, pfx2) == None
      
-    def find_stray_prefix(self):
+    def find_open_prefix(self):
         for p, a in itertools.product(self.prefixes, self.alphabet) :
             t = p + a
             if t not in self.rows :
@@ -156,21 +156,21 @@ class ObservationTable(object):
         return None 
     
     def closed(self):
-        # print("find_stray", self.find_stray_prefix() == None)
-        return self.find_stray_prefix() == None        
+        # print("find_stray", self.find_open_prefix() == None)
+        return self.find_open_prefix() == None        
         
     def consistent(self):
         return self.find_inconsistent_extension() == None 
-
-    def unspecified_pairs(self):
-        res = set()
-        alphexts = sorted(self.alphabet.union(self.suffixes), key = lambda x: (len(x), x))
-        #print(self.prefixes, alphexts)
-        for p in self.prefixes:
-            for e in alphexts:
-                if p not in self.rows or e not in self.rows[p]:
-                    res.add( (p, e) )
-        return res
+    #
+    # def unspecified_pairs(self):
+    #     res = set()
+    #     alphexts = sorted(self.alphabet.union(self.suffixes), key = lambda x: (len(x), x))
+    #     #print(self.prefixes, alphexts)
+    #     for p in self.prefixes:
+    #         for e in alphexts:
+    #             if p not in self.rows or e not in self.rows[p]:
+    #                 res.add( (p, e) )
+    #     return res
     
     def find_unspecified(self):
         for px, e in itertools.product(self.prefixes, self.suffixes) :
@@ -185,15 +185,15 @@ class ObservationTable(object):
                         return px + a + e
                     
         return None
-    
-    def find_undecided(self):
-        for px in self.prefixes:
-            if self.EMPTYSTRING not in self.rows[px] :
-                return px
-        return None
-    
-    def fullyspecified(self):
-        return self.find_unspecified == None
+    #
+    # def find_undecided(self):
+    #     for px in self.prefixes:
+    #         if self.EMPTYSTRING not in self.rows[px] :
+    #             return px
+    #     return None
+    #
+    # def fullyspecified(self):
+    #     return self.find_unspecified == None
     
 class DFA(object):
     '''
@@ -282,7 +282,7 @@ class DFA(object):
             pfx = None
             unspec = None
             while (ext := obtable.find_inconsistent_extension()) != None \
-            or (pfx := obtable.find_stray_prefix()) != None \
+            or (pfx := obtable.find_open_prefix()) != None \
             or (unspec := obtable.find_unspecified()) != None :                
                 if  ext != None :
                     obtable.add_suffix(ext)
@@ -298,9 +298,9 @@ class DFA(object):
                 else:
                     print("obtable is closed.")
                 
-                # if ext == None and pfx == None :
-                #     self.define_machine(obtable)
-                #     print(self)
+                if ext == None and pfx == None :
+                    self.define_machine(obtable)
+                    print(self)
 
                 print(obtable)
                 if unspec != None :
