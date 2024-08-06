@@ -173,16 +173,24 @@ class ObservationTable(object):
     #     return res
     
     def find_unspecified(self):
-        for px, e in itertools.product(self.prefixes, self.suffixes) :
-            if px not in self.rows or e not in self.rows[px]:
-                #print("as px + e", px)
-                return px + e
-        for px, a in itertools.product(self.prefixes, self.alphabet):
-            if px + a not in self.prefixes:
-                for e in self.suffixes:
-                    if px + a not in self.rows or e not in self.rows[px+a]:
-                        #print("as px + a + e", px)
-                        return px + a + e
+        for pfx in sorted( set(list(self.prefixes) 
+                               + [px + a for px, a in itertools.product(self.prefixes, self.alphabet)]) \
+                          , key = lambda x : (len(x), x)) :
+            for e in self.suffixes:
+                if pfx not in self.rows or e not in self.rows[pfx]:
+                    #print("as px + a + e", px)
+                    return pfx + e
+    
+        # for px, e in itertools.product(self.prefixes, self.suffixes) :
+        #     if px not in self.rows or e not in self.rows[px]:
+        #         #print("as px + e", px)
+        #         return px + e
+        # for px, a in itertools.product(self.prefixes, self.alphabet):
+        #     if px + a not in self.prefixes:
+        #         for e in self.suffixes:
+        #             if px + a not in self.rows or e not in self.rows[px+a]:
+        #                 #print("as px + a + e", px)
+        #                 return px + a + e
                     
         return None
     #
@@ -258,10 +266,11 @@ class DFA(object):
         self.acceptingStates.clear()
         rowstrings = dict()
         for pfx in obtable.prefixes :
-            rowstr = obtable.row_string(pfx)
-            if rowstr not in rowstrings :
+            pfxrowstr = obtable.row_string(pfx)
+            if pfxrowstr not in rowstrings :
                 self.states.add(pfx)
-                rowstrings[rowstr] = pfx
+                rowstrings[pfxrowstr] = pfx
+        print(rowstrings)
         for s, a in itertools.product(self.states, self.alphabet) :
             for p in self.states :
                 if obtable.rows_agree(s+a, p) :
@@ -277,10 +286,9 @@ class DFA(object):
         
     def learn_by_mat(self):
         obtable = ObservationTable(self.alphabet)
+        cx_count = 0
+        ex_count = 0
         while True:
-            ext = None
-            pfx = None
-            unspec = None
             while (ext := obtable.find_inconsistent_extension()) != None \
             or (pfx := obtable.find_open_prefix()) != None \
             or (unspec := obtable.find_unspecified()) != None :                
@@ -305,6 +313,7 @@ class DFA(object):
                 print(obtable)
                 if unspec != None :
                     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
+                    ex_count += 1
                     obtable.fill(unspec, xclass)
 
             self.define_machine(obtable)
@@ -317,11 +326,13 @@ class DFA(object):
             if len(cxpair) == 1 :
                 cxpair.append('0' if self.accept(cxpair[0]) else '1')
             print("counter example: {}, {}".format(cxpair[0],cxpair[1]))
+            cx_count += 1
             obtable.fill(cxpair[0], cxpair[1],addprefixes=True)
             # while (unspec := obtable.find_unspecified()) != None :
             #     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
             #     obtable.fill(unspec, xclass)
             print(obtable)
+        print("MQ: {}, EQ: {}".format(ex_count, cx_count))
         return 
 
     
