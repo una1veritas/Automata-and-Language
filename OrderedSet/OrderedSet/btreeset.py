@@ -250,9 +250,7 @@ class BTree:
             elif len(path) > 0 : 
                 ''' node has the parent '''
                 parent, ppos = path[-1]
-                #print("path=",path)
-                #print("parent = ", parent, " node = ", node)
-                '''
+                
                 rs = node.right_sibling(parent, ppos) 
                 if rs != None and rs.elementcount() < self.max_keycount() :
                     node.rotate_right(parent,ppos)
@@ -262,10 +260,9 @@ class BTree:
                     node.rotate_left(parent, ppos)
                     break
                 else:
-                    #print("no siblings with sufficient space!")
-                    '''
-                updata, left, right = node.split()
-                parent.insert_internal(ppos,updata,left,right)
-                # going up
-                node, ppos = path.pop()
+                    #print("no siblings with sufficient space!")                    
+                    updata, left, right = node.split()
+                    parent.insert_internal(ppos,updata,left,right)
+                    # going up
+                    node, ppos = path.pop()
         return True
