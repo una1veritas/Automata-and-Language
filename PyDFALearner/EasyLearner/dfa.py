@@ -264,13 +264,16 @@ class DFA(object):
         self.states.clear()
         self.transfunc.clear()
         self.acceptingStates.clear()
-        rowstrings = dict()
+        
         for pfx in obtable.prefixes :
-            pfxrowstr = obtable.row_string(pfx)
-            if pfxrowstr not in rowstrings :
+            if len(self.states) == 0 :
                 self.states.add(pfx)
-                rowstrings[pfxrowstr] = pfx
-        print(rowstrings)
+                continue
+            for s in self.states :
+                if obtable.rows_agree(pfx, s) :
+                    break
+            else: 
+                self.states.add(pfx)
         for s, a in itertools.product(self.states, self.alphabet) :
             for p in self.states :
                 if obtable.rows_agree(s+a, p) :
