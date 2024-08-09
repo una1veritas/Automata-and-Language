@@ -71,8 +71,11 @@ class OrderedSet(object):
         # print(self.elements, elem, idx, self.elements[:idx])
         if len(self.elements) == 0 or len(self.elements) == idx or self.elements[idx] != elem :
             self.elements.insert(idx, elem)
-            
-    def pop(self, elem):
+
+    def pop(self, *args):
+        return self.elements.pop(*args)
+        
+    def remove(self, elem):
         if len(self.elements) == 0 :
             return
         idx = self.lower_bound(elem) #bisect.bisect_left(self.elements, elem,self.sortkey)

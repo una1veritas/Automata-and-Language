@@ -7,8 +7,12 @@ class OrderedSet(object):
         self.elements = list()
         self.sortkey = key
         if collection is not None :
-            self.insert_all(collection)
-    
+            if isinstance(collection, (set, list, tuple)) :
+                self.insert_all(collection)
+            elif isinstance(collection, OrderedSet) :
+                self.elements = collection.elements.copy()
+                self.sortkey = collection.sortkey
+                
     def __str__(self)->str:
         return str(self.elements)
 
@@ -23,7 +27,12 @@ class OrderedSet(object):
     
     def __contains__(self, d):
         ix = self.lower_bound(d)
+        if ix >= len(self.elements) : 
+            return False 
         return self.elements[ix] == d
+    
+    def __getitem__(self, idx):
+        return self.elements[idx]
     
     def insert_all(self, collection):
         for e in collection:
@@ -50,13 +59,23 @@ class OrderedSet(object):
             #     break
         return ridx
     
+    def union(self, another):
+        if isinstance(another, (set, list, tuple)) :
+            os = OrderedSet(self)
+            os.insert_all(another)
+            return os
+        raise ValueError("OrderedSet union: Error, the argument is neither set, list nor tuple.")
+    
     def insert(self, elem):
         idx = self.lower_bound(elem) #bisect.bisect_left(self.elements, elem, key=self.sortkey)
         # print(self.elements, elem, idx, self.elements[:idx])
         if len(self.elements) == 0 or len(self.elements) == idx or self.elements[idx] != elem :
             self.elements.insert(idx, elem)
-            
-    def pop(self, elem):
+
+    def pop(self, *args):
+        return self.elements.pop(*args)
+        
+    def remove(self, elem):
         if len(self.elements) == 0 :
             return
         idx = self.lower_bound(elem) #bisect.bisect_left(self.elements, elem,self.sortkey)

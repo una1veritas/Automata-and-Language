@@ -155,6 +155,23 @@ class ObservationTable(object):
                         return a + ext
         return None 
     
+    def find_transition_gap(self):
+        prefs = OrderedSet(self.prefixes)
+        prefs.pop() # pop ''
+        while len(prefs) > 0 : 
+            first = prefs.pop()
+            src = self.representative_prefix(first[:-1])
+            dst = self.representative_prefix(src + first[-1:])
+            if dst != self.representative_prefix(first) :
+                return (first[:-1], first)            
+        return None
+    
+    def representative_prefix(self, pfx):
+        for s in self.prefixes:
+            if self.rows_agree(s, pfx):
+                return s
+        return pfx
+        
     def closed(self):
         # print("find_stray", self.find_open_prefix() == None)
         return self.find_open_prefix() == None        
@@ -309,16 +326,25 @@ class DFA(object):
                 else:
                     print("obtable is closed.")
                 
-                if ext == None and pfx == None :
-                    self.define_machine(obtable)
-                    print(self)
-
+                print("current ", end="")
                 print(obtable)
+                print()
+
+                if ext == None and pfx == None :
+                    if (gap := obtable.find_transition_gap()) == None:
+                        print("Tentative machine: ")
+                        self.define_machine(obtable)
+                        print(self)
+                    else:
+                        print("Table has a transition gap between {} and {}.".format(gap[0], gap[1]))
+                
                 if unspec != None :
                     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
                     ex_count += 1
                     obtable.fill(unspec, xclass)
+                    print()
 
+            print("The target machine to our knowledge:")
             self.define_machine(obtable)
             print(self)
             cxpair = input("eq: is there a counter-example? ") 
