@@ -3,6 +3,7 @@ Created on 2024/07/22
 
 @author: sin
 '''
+from lib2to3.pytree import Leaf
 
 class BTree:
     MIN_CHILDREN_COUNT = 2
@@ -43,6 +44,12 @@ class BTree:
         
         def __repr__(self):
             return str(self.elements) #+ ", " + str(self.children)
+
+        def __getitem__(self, x):
+            return self.elements[x]
+
+        def __setitem__(self, x, val):
+            self.elements[x] = val
 
         def elementcount(self):
             return len(self.elements)
@@ -85,9 +92,7 @@ class BTree:
             # cnt = 0
             while lidx < ridx :
                 idx = (lidx + ridx) >> 1
-                key_e = key(elem)
-                key_idx = key(self.elements[idx]) 
-                if key_idx < key_e :
+                if key(self.elements[idx]) < key(elem) :
                     lidx = idx + 1
                 else:
                     ridx = idx
@@ -101,6 +106,12 @@ class BTree:
             self.children[ix] = left
             #print("insert internal: ", self.elements, self.children)
             return ix
+        
+        def remove_leaf(self, ix):
+            print(self.elements, ix)
+            self.elements.pop(ix)
+            return ix
+                
         
         def split(self):
             ix = self.elementcount() >> 1
@@ -179,33 +190,39 @@ class BTree:
     def __contains__(self, data) -> bool :
         path = self.find_path(data)
         return path[-1][0].elements[path[-1][1]] == data
-    
-    def node_has_rightsibling(self, node, parent, poshint = None, data=None):
-        if poshint == None and data != None:
-            poshint = parent.find_path(data)
-        elif poshint == None and data == None :
-            for i in range(parent.elementcount()+1) :
-                if parent.children[i] == node :
-                    poshint = i
-                    break
-        if poshint + 1 <= parent.elementcount() and \
-        self.min_keycount() < parent.children[poshint+1].elementcount() < self.max_keycount() :
-            return True
-        else:
-            return False
-            
-    def node_has_leftsibling(self, node, parent, poshint = None, data=None):
-        if poshint == None and data != None:
-            poshint = parent.find_path(data)
-        elif poshint == None and data == None :
-            for i in range(parent.elementcount()+1) :
-                if parent.children[i] == node :
-                    poshint = i
-                    break
-        if poshint > 0 and self.min_keycount() < parent.children[poshint - 1].elementcount() < self.max_keycount() :
-            return True
-        else:
-            return False
+        
+    # def node_has_rightsibling(self, node, parent, poshint = None, data=None):
+    #     if poshint == None and data != None:
+    #         poshint = parent.lower_bound(data, self.sortkey)
+    #     elif poshint == None and data == None :
+    #         for i in range(parent.elementcount()+1) :
+    #             if parent.children[i] == node :
+    #                 poshint = i
+    #                 break
+    #         else:
+    #             return False
+    #     if poshint + 1 <= parent.elementcount() and \
+    #     self.min_keycount() < parent.children[poshint+1].elementcount() < self.max_keycount() :
+    #         return True
+    #     else:
+    #         return False
+    #
+    # def node_has_leftsibling(self, node, parent, poshint = None, data=None):
+    #     if poshint == None and data != None:
+    #         poshint = parent.lower_bound(data, self.sortkey)
+    #     elif poshint == None and data == None :
+    #         for i in range(parent.elementcount()+1) :
+    #             if parent.children[i] == node :
+    #                 poshint = i
+    #                 break
+    #         else:
+    #             return False
+    #     print("has left?", node, parent, poshint)
+    #     print(self.min_keycount(), parent.children[poshint - 1].elementcount(), self.max_keycount())
+    #     if poshint > 0 and self.min_keycount() < parent.children[poshint - 1].elementcount() < self.max_keycount() :
+    #         return True
+    #     else:
+    #         return False
     
     def find_path(self, data):
         path = [[self.root, None]]
@@ -266,3 +283,61 @@ class BTree:
                     # going up
                     node, ppos = path.pop()
         return True
+
+    def continue_find_path(self, data, path):
+        node, ix = path[-1]
+        while not node.is_leaf() :
+            node = node.children[ix]
+            ix = node.lower_bound(data, self.sortkey)
+            path.append([node, ix])
+        return path
+    
+    def remove(self, data) -> bool:
+        if self.root == None :
+            return False
+        print("to remove ", data)
+        path = self.find_path(data)
+        print(path)
+        print("path[-1] = ", path[-1])
+        node, pos = path[-1]
+        if not node.is_leaf() :
+            path = self.continue_find_path(data, path)
+            leaf, lpos = path[-1]
+            ''' lpos indicate the next (non-existing index) '''
+            lpos -= 1
+            print("path[-1] = ", path[-1])
+            ''' swap data and elements '''
+            target = node[pos]
+            node[pos] = leaf[lpos]
+            leaf[lpos] = target
+            node = leaf
+            pos = lpos
+        print("node, pos = ", node, pos)
+        node.remove_leaf(pos)
+        self.count -= 1
+        while node.elementcount() < self.min_keycount():
+            print("run-out")
+            node, pos = path.pop()
+            print(node, pos, ", path = ", path)
+            parent, posatparent = path[-1]
+            print(parent, posatparent)
+            ls = node.left_sibling(parent, posatparent)
+            print(ls)
+            if ls != None and ls.elementcount() > self.min_keycount() :
+                print("rr")
+                ls.rotate_right(parent, posatparent - 1)
+                break
+            rs = node.right_sibling(parent, posatparent)
+            if rs != None and rs.elementcount() > self.min_keycount() :
+                print("rl")
+                rs.rotate_right(parent, posatparent + 1)
+                break
+            else:
+                print("merge down")
+                ''' merge down '''
+                break
+                pass
+            break
+            pass
+        return True
+    

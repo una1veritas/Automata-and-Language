@@ -21,6 +21,13 @@ for s in t:
     print(s)
     
 print(len(t))
+
+t.remove("Benjamin")
+print(t)
+t.remove("Dorothy")
+print(t)
+t.remove("David")
+print(t)
 '''
 Ameli Alice Anette Amy Brad Bob Betty Ben Bolis Cathy Charles Claudia Cindy Colin David Daisy Aderyn Abbie Ada
 '''
