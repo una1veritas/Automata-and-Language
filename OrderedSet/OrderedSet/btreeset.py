@@ -4,6 +4,7 @@ Created on 2024/07/22
 @author: sin
 '''
 from lib2to3.pytree import Leaf
+from test.test_exception_group import leaf_generator
 
 class BTree:
     MIN_CHILDREN_COUNT = 2
@@ -57,33 +58,29 @@ class BTree:
         def is_leaf(self):
             return self.children == None
         
-        def right_sibling(self, parent, poshint = None):
-            if poshint == None or \
-            (0 <= poshint < parent.elementcount() and parent.children[poshint] != self) :
-                for i in range(parent.elementcount()) :
-                    if parent.children[i] == self :
-                        return parent.children[i+1]
+        def right_sibling(self, parent, selfidx = None):
+            if selfidx != None and parent.children[selfidx] == self :
+                if 0 <= selfidx < parent.elementcount() :
+                    return parent.children[selfidx+1]
                 else:
                     return None
+            for i in range(parent.elementcount()) :
+                if parent.children[i] == self :
+                    return parent.children[i+1]
             else:
-                if 0 <= poshint < parent.elementcount() :
-                    return parent.children[poshint+1]
-                else:
-                    return None
+                return None
                 
-        def left_sibling(self, parent, poshint = None):
-            if poshint == None or \
-            (0 < poshint <= parent.elementcount() and parent.children[poshint] != self) :
-                for i in range(1, parent.elementcount() + 1) :
-                    if parent.children[i] == self :
-                        return parent.children[i-1]
+        def left_sibling(self, parent, selfidx = None):
+            if selfidx != None and parent.children[selfidx] == self :
+                if 0 < selfidx <= parent.elementcount() :
+                    return parent.children[selfidx - 1]
                 else:
                     return None
+            for i in range(1, parent.elementcount() + 1) :
+                if parent.children[i] == self :
+                    return parent.children[i-1]
             else:
-                if 0 < poshint <= parent.elementcount() :
-                    return parent.children[poshint-1]
-                else:
-                    return None
+                return None
                 
         def lower_bound(self, elem, key):
             # print()
@@ -106,6 +103,30 @@ class BTree:
             self.children[ix] = left
             #print("insert internal: ", self.elements, self.children)
             return ix
+        
+        def merge(self, parent, posatp):
+            if parent.children[posatp] == self :
+                pass
+            else:
+                raise ValueError("wrong posatp")
+            if posatp < parent.elementcount() :
+                rsibling = parent.children[posatp + 1]
+                ix = posatp
+                self.elements = self.elements + parent.elements[ix:ix+1] + rsibling.elements
+                if not self.is_leaf() :
+                    self.children = self.children + rsibling.children
+                parent.elements.pop(ix)
+                parent.children.pop(ix+1)
+                del rsibling
+            elif posatp > 0 :
+                lsibling = parent.children[posatp - 1]
+                ix = posatp - 1
+                self.elements =  lsibling.elements + parent.elements[ix:ix+1] + self.elements
+                if not self.is_leaf() :
+                    self.children = rsibling.children + self.children
+                parent.elements.pop(ix)
+                parent.children.pop(ix)
+                del lsibling
         
         def remove_leaf(self, ix):
             print(self.elements, ix)
@@ -298,46 +319,44 @@ class BTree:
         print("to remove ", data)
         path = self.find_path(data)
         print(path)
-        print("path[-1] = ", path[-1])
+        #print("path[-1] = ", path[-1])
         node, pos = path[-1]
         if not node.is_leaf() :
             path = self.continue_find_path(data, path)
             leaf, lpos = path[-1]
             ''' lpos indicate the next (non-existing index) '''
             lpos -= 1
-            print("path[-1] = ", path[-1])
+            #print("path[-1] = ", path[-1])
             ''' swap data and elements '''
             target = node[pos]
             node[pos] = leaf[lpos]
             leaf[lpos] = target
             node = leaf
-            pos = lpos
+            pos = lpos 
+        path.pop()
         print("node, pos = ", node, pos)
         node.remove_leaf(pos)
         self.count -= 1
         while node.elementcount() < self.min_keycount():
-            print("run-out")
-            node, pos = path.pop()
-            print(node, pos, ", path = ", path)
             parent, posatparent = path[-1]
             print(parent, posatparent)
             ls = node.left_sibling(parent, posatparent)
-            print(ls)
             if ls != None and ls.elementcount() > self.min_keycount() :
-                print("rr")
+                print("rr from ", ls)
                 ls.rotate_right(parent, posatparent - 1)
                 break
             rs = node.right_sibling(parent, posatparent)
             if rs != None and rs.elementcount() > self.min_keycount() :
-                print("rl")
-                rs.rotate_right(parent, posatparent + 1)
+                print("rl from ", rs)
+                rs.rotate_left(parent, posatparent + 1)
                 break
             else:
-                print("merge down")
+                print("merge")
                 ''' merge down '''
-                break
-                pass
+                node.merge(parent, posatparent)
+                node, pos = path.pop()
+                continue
             break
-            pass
+
         return True
     
