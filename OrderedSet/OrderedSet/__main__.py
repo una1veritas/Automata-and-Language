@@ -5,35 +5,52 @@ Created on 2024/07/21
 '''
 
 import sys
+import random
+import time
+
 from orderedset import OrderedSet
-from btreeset import BTree
+from btreeset import BTreeSet
 
-t = BTree(minsize=2)
-for d in sys.argv[1:] :
-    print("inserting ", d)
-    t.insert(d)
-    print("updated btree =", t, "\n")
+btree = BTreeSet(minsize=16)
+s = set()
 
-# for d in t:
-#     print(d)
+oplist = list()
+for i in range(1000000):
+    op = 'A' if random.uniform(0,3) > 1 else 'R'
+    n = int(random.uniform(0, 1024*128))
+    oplist.append((op,n))
 
-for s in t:
-    print(s)
-    
-print(len(t))
+sw = time.time()
+for e in oplist:
+    if e[0] == 'A' :
+        s.add(e[1])
+    elif e[1] in s:
+        s.remove(e[1])
+sw = time.time() - sw
+print(sw)
+sw = time.time()
+s = sorted(s)
+sw = time.time() - sw
+print(sw)
 
-t.remove("Benjamin")
-print(t)
-t.remove("Dorothy")
-print(t)
-t.remove("Alice")
-print(t)
-t.remove("Benedict")
-print(t)
-t.remove("Amy")
-print(t)
-t.remove("Clint")
-print(t)
+print(len(s))
+
+sw = time.time()
+for e in oplist:
+    if e[0] == 'A' :
+        btree.add(e[1])
+    elif e[1] in btree:
+        btree.remove(e[1])
+sw = time.time() - sw
+print(sw)
+sw = time.time()
+s = sorted(s)
+sw = time.time() - sw
+print(sw)
+print(len(btree))
+print(btree.hight())
+
+
 '''
 Ameli Alice Anette Amy Brad Bob Betty Ben Bolis Cathy Charles Claudia Cindy Colin David Daisy Aderyn Abbie Ada
 '''

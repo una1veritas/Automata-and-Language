@@ -29,10 +29,10 @@ class ObservationTable(object):
         （ますが埋まった）接尾辞の集合．self.suffixes には含まれないが，
         self.row[s][x] が登録ずみの文字列 x. Angluin '87 にはないもの．
         '''
-        self.prefixes.insert(self.EMPTYSTRING)
+        self.prefixes.add(self.EMPTYSTRING)
         self.rows[self.EMPTYSTRING] = dict()
         self.extensions.add(self.EMPTYSTRING)
-        self.suffixes.insert(self.EMPTYSTRING)
+        self.suffixes.add(self.EMPTYSTRING)
     
     def __str__(self)->str:
         result =  "ObservationTable(" + "'" + ''.join(sorted(self.alphabet)) + "', \n" 
@@ -60,13 +60,13 @@ class ObservationTable(object):
     
     def add_suffix(self, sfx):
         self.extensions.add(sfx)
-        self.suffixes.insert(sfx)
+        self.suffixes.add(sfx)
     
     def add_extension(self, sfx):
         self.extensions.add(sfx)
     
     def add_prefix(self,pfx):
-        self.prefixes.insert(pfx)
+        self.prefixes.add(pfx)
         if pfx not in self.rows:
             self.rows[pfx] = dict()
     
