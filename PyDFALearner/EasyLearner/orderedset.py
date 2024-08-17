@@ -2,16 +2,19 @@
 import sys
 
 class OrderedSet(object):
-    
+        
     def __init__(self, collection = None, key= lambda x: x):
-        self.elements = list()
         self.sortkey = key
-        if collection is not None :
-            if isinstance(collection, (set, list, tuple)) :
-                self.add_all(collection)
-            elif isinstance(collection, OrderedSet) :
+        if collection == None :
+            self.elements = list()
+        else:
+            if isinstance(collection, OrderedSet) :
                 self.elements = collection.elements.copy()
                 self.sortkey = collection.sortkey
+            else:
+                self.elements = list()
+                self.add_all(collection)
+                
                 
     def __str__(self)->str:
         return str(self.elements)

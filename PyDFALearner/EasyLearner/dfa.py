@@ -4,7 +4,8 @@ Created on 2024/06/01
 @author: Sin Shimozono
 '''
 import itertools
-from orderedset import OrderedSet
+from btreeset import BTreeSet
+from test.test_quopri import QuopriTestCase
 
 class ObservationTable(object):
     EMPTYSTRING = ''
@@ -15,11 +16,11 @@ class ObservationTable(object):
     def __init__(self, finitealphabet):
         self.alphabet = set(finitealphabet)
         self.rows = dict()
-        self.prefixes = OrderedSet(key=lambda x: (len(x), x))
-        self.suffixes = OrderedSet(key=lambda x: (len(x), x))
+        self.prefixes = BTreeSet(key=lambda x: (len(x), x))
+        self.suffixes = BTreeSet(key=lambda x: (len(x), x))
         self.extensions = set()
         '''
-        OrderedSet   --- 自作の，二分探索法を使った集合．要素がソート済みになっている．
+        BTreeSet/OrderedSet   --- 自作の集合．要素がソート済みになっている．
         self.alphabet --- 有限アルファベット．'' から 1 文字拡張する際に既知である必要がある. 
         self.rows     --- 行辞書の集まり，表（の中身，ます）
         self.prefixes --- 接頭辞の集合 S. なお S の要素と文字を連結した拡張接頭辞は，
@@ -156,10 +157,9 @@ class ObservationTable(object):
         return None 
     
     def find_transition_gap(self):
-        prefs = OrderedSet(self.prefixes)
-        prefs.pop() # pop ''
-        while len(prefs) > 0 : 
-            first = prefs.pop()
+        for first in self.prefixes:
+            if len(first) == 0 :
+                continue
             src = self.representative_prefix(first[:-1])
             dst = self.representative_prefix(src + first[-1:])
             if dst != self.representative_prefix(first) :
