@@ -239,8 +239,11 @@ class BTreeSet:
         path = [[self.root, None]]
         while path[-1][0] != None:
             if path[-1][0].is_leaf() :
+                path[-1][1] = path[-1][0].elementcount() - 1
                 break
-            path.append([path[-1][0].children[-1], path[-1][0].elementcount()])
+            else:
+                path[-1][1] = path[-1][0].elementcount()
+                path.append([path[-1][0].children[-1], None])
         return path
                 
     def find_path(self, data):
@@ -369,12 +372,3 @@ class BTreeSet:
                 node, pos = path.pop()
 
         return
-
-    def pop(self, *args):
-        if len(args) == 0 :
-            node, pos = self.find_last()[-1]
-            if node == None :
-                raise IndexError('pop from empty Node')
-            return node.elements.pop()
-        else:
-            raise UnimplementedError('pop')
