@@ -269,7 +269,6 @@ class BTreeSet:
         return path
     
     def add(self, data):
-        print("data = '{}'".format(data), type(data))
         if self.root == None :
             self.root = BTreeSet.Node(data)
             print(self.root)

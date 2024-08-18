@@ -5,7 +5,6 @@ Created on 2024/06/01
 '''
 import itertools
 from btreeset import BTreeSet
-from test.test_quopri import QuopriTestCase
 
 class ObservationTable(object):
     EMPTYSTRING = ''
@@ -18,7 +17,7 @@ class ObservationTable(object):
         self.rows = dict()
         self.prefixes = BTreeSet(key=lambda x: (len(x), x))
         self.suffixes = BTreeSet(key=lambda x: (len(x), x))
-        self.extensions = set()
+        self.extensions = BTreeSet(key=lambda x: (len(x), x))
         '''
         BTreeSet/OrderedSet   --- 自作の集合．要素がソート済みになっている．
         self.alphabet --- 有限アルファベット．'' から 1 文字拡張する際に既知である必要がある. 
@@ -37,8 +36,7 @@ class ObservationTable(object):
     
     def __str__(self)->str:
         result =  "ObservationTable(" + "'" + ''.join(sorted(self.alphabet)) + "', \n" 
-        ext_suffixes = [sfx for sfx in sorted(self.extensions, key=lambda x: (len(x),x)) if sfx not in self.suffixes] 
-        result += str(self.suffixes) + ",\n"
+        result += str(list(self.suffixes)) + ",\n"
         printedpfx = set()
         for pfx in self.prefixes :
             result += " {0:8}| ".format(pfx)
@@ -103,10 +101,10 @@ class ObservationTable(object):
             self.rows[pfx][sfx] = xclass
     
     def row_string(self, pfx):
-        if pfx in self.rows :
-            result = "".join([str(self.rows[pfx].get(s, '.')) for s in self.suffixes])
-            return result
-        return ''.join(['.' for i in self.suffixes])
+        # if pfx in self.rows :
+        #     result = "".join([str(self.rows[pfx].get(s, '.')) for s in self.suffixes])
+        #     return result
+        return ''.join([str(self.rows[pfx][s]) if pfx in self.rows and s in self.rows[pfx] else '.' for s in self.suffixes])
 
     def extension_string(self, pfx):
         result = self.row_string(pfx) + " "
@@ -153,17 +151,17 @@ class ObservationTable(object):
                     #print("{}, {}, +{}; {}/{} -> {},{}".format(s1,s2,a,self.row_string(s1), self.row_string(s2),self.row_string(s1+a), self.row_string(s2+a)))
                     ext = self.rows_disagree(s1+a, s2+a)
                     if ext != None :
-                        return a + ext
+                        return (s1,s2,a + ext)
         return None 
     
     def find_transition_gap(self):
-        for first in self.prefixes:
-            if len(first) == 0 :
+        for pfx in self.prefixes:
+            if len(pfx) == 0 :
                 continue
-            src = self.representative_prefix(first[:-1])
-            dst = self.representative_prefix(src + first[-1:])
-            if dst != self.representative_prefix(first) :
-                return (first[:-1], first)            
+            src = self.representative_prefix(pfx[:-1])
+            dst = self.representative_prefix(src + pfx[-1:])
+            if dst != self.representative_prefix(pfx) :
+                return (pfx[:-1], pfx)            
         return None
     
     def representative_prefix(self, pfx):
@@ -287,7 +285,8 @@ class DFA(object):
                 self.states.add(pfx)
                 continue
             for s in self.states :
-                if obtable.rows_agree(pfx, s) :
+                if obtable.rows_agree(pfx, s) \
+                and all(obtable.rows_agree(pfx+a, s+a) for a in self.alphabet ) :
                     break
             else: 
                 self.states.add(pfx)
@@ -313,8 +312,8 @@ class DFA(object):
             or (pfx := obtable.find_open_prefix()) != None \
             or (unspec := obtable.find_unspecified()) != None :                
                 if  ext != None :
-                    obtable.add_suffix(ext)
-                    print("obtable is not consistent. adding suffix '{}'".format(ext))
+                    obtable.add_suffix(ext[2])
+                    print("obtable is not consistent between {} and {}. adding suffix '{}'".format(ext[0], ext[1],ext[2]))
                     continue
                 else:
                     print("obtable is consistent.")
@@ -331,12 +330,12 @@ class DFA(object):
                 print()
 
                 if ext == None and pfx == None :
-                    if (gap := obtable.find_transition_gap()) == None:
+                    # if (gap := obtable.find_transition_gap()) == None:
                         print("Tentative machine: ")
                         self.define_machine(obtable)
                         print(self)
-                    else:
-                        print("Table has a transition gap between {} and {}.".format(gap[0], gap[1]))
+                    # else:
+                    #     print("Table has a transition gap between {} and {}.".format(gap[0], gap[1]))
                 
                 if unspec != None :
                     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
