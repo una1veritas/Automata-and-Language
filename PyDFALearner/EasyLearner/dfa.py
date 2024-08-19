@@ -284,11 +284,9 @@ class DFA(object):
             if len(self.states) == 0 :
                 self.states.add(pfx)
                 continue
-            for s in self.states :
-                if obtable.rows_agree(pfx, s) \
-                and all(obtable.rows_agree(pfx+a, s+a) for a in self.alphabet ) :
-                    break
-            else: 
+            # find the shortest lexico-first prefix equivalents to pfx 
+            rpfx = obtable.representative_prefix(pfx)
+            if rpfx not in self.states :
                 self.states.add(pfx)
         for s, a in itertools.product(self.states, self.alphabet) :
             for p in self.states :
@@ -330,12 +328,12 @@ class DFA(object):
                 print()
 
                 if ext == None and pfx == None :
-                    # if (gap := obtable.find_transition_gap()) == None:
+                    if (gap := obtable.find_transition_gap()) == None:
                         print("Tentative machine: ")
                         self.define_machine(obtable)
                         print(self)
-                    # else:
-                    #     print("Table has a transition gap between {} and {}.".format(gap[0], gap[1]))
+                    else:
+                        print("Table has a transition gap between {} and {}.".format(gap[0], gap[1]))
                 
                 if unspec != None :
                     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
