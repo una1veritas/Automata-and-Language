@@ -4,7 +4,7 @@ Created on 2024/06/01
 @author: Sin Shimozono
 '''
 import itertools
-from orderedset import OrderedSet
+from btreeset import BTreeSet
 
 class ObservationTable(object):
     EMPTYSTRING = ''
@@ -15,11 +15,11 @@ class ObservationTable(object):
     def __init__(self, finitealphabet):
         self.alphabet = set(finitealphabet)
         self.rows = dict()
-        self.prefixes = OrderedSet(key=lambda x: (len(x), x))
-        self.suffixes = OrderedSet(key=lambda x: (len(x), x))
-        self.extensions = set()
+        self.prefixes = BTreeSet(key=lambda x: (len(x), x))
+        self.suffixes = BTreeSet(key=lambda x: (len(x), x))
+        self.extensions = BTreeSet(key=lambda x: (len(x), x))
         '''
-        OrderedSet   --- 自作の，二分探索法を使った集合．要素がソート済みになっている．
+        BTreeSet/OrderedSet   --- 自作の集合．要素がソート済みになっている．
         self.alphabet --- 有限アルファベット．'' から 1 文字拡張する際に既知である必要がある. 
         self.rows     --- 行辞書の集まり，表（の中身，ます）
         self.prefixes --- 接頭辞の集合 S. なお S の要素と文字を連結した拡張接頭辞は，
@@ -29,15 +29,14 @@ class ObservationTable(object):
         （ますが埋まった）接尾辞の集合．self.suffixes には含まれないが，
         self.row[s][x] が登録ずみの文字列 x. Angluin '87 にはないもの．
         '''
-        self.prefixes.insert(self.EMPTYSTRING)
+        self.prefixes.add(self.EMPTYSTRING)
         self.rows[self.EMPTYSTRING] = dict()
         self.extensions.add(self.EMPTYSTRING)
-        self.suffixes.insert(self.EMPTYSTRING)
+        self.suffixes.add(self.EMPTYSTRING)
     
     def __str__(self)->str:
         result =  "ObservationTable(" + "'" + ''.join(sorted(self.alphabet)) + "', \n" 
-        ext_suffixes = [sfx for sfx in sorted(self.extensions, key=lambda x: (len(x),x)) if sfx not in self.suffixes] 
-        result += str(self.suffixes) + str(ext_suffixes) + ",\n"
+        result += str(list(self.suffixes)) + ",\n"
         printedpfx = set()
         for pfx in self.prefixes :
             result += " {0:8}| ".format(pfx)
@@ -60,13 +59,13 @@ class ObservationTable(object):
     
     def add_suffix(self, sfx):
         self.extensions.add(sfx)
-        self.suffixes.insert(sfx)
+        self.suffixes.add(sfx)
     
     def add_extension(self, sfx):
         self.extensions.add(sfx)
     
     def add_prefix(self,pfx):
-        self.prefixes.insert(pfx)
+        self.prefixes.add(pfx)
         if pfx not in self.rows:
             self.rows[pfx] = dict()
     
@@ -102,10 +101,10 @@ class ObservationTable(object):
             self.rows[pfx][sfx] = xclass
     
     def row_string(self, pfx):
-        if pfx in self.rows :
-            result = "".join([str(self.rows[pfx].get(s, '.')) for s in self.suffixes])
-            return result
-        return ''.join(['.' for i in self.suffixes])
+        # if pfx in self.rows :
+        #     result = "".join([str(self.rows[pfx].get(s, '.')) for s in self.suffixes])
+        #     return result
+        return ''.join([str(self.rows[pfx][s]) if pfx in self.rows and s in self.rows[pfx] else '.' for s in self.suffixes])
 
     def extension_string(self, pfx):
         result = self.row_string(pfx) + " "
@@ -152,9 +151,25 @@ class ObservationTable(object):
                     #print("{}, {}, +{}; {}/{} -> {},{}".format(s1,s2,a,self.row_string(s1), self.row_string(s2),self.row_string(s1+a), self.row_string(s2+a)))
                     ext = self.rows_disagree(s1+a, s2+a)
                     if ext != None :
-                        return a + ext
+                        return (s1,s2,a + ext)
         return None 
     
+    def find_transition_gap(self):
+        for pfx in self.prefixes:
+            if len(pfx) == 0 :
+                continue
+            src = self.representative_prefix(pfx[:-1])
+            dst = self.representative_prefix(src + pfx[-1:])
+            if dst != self.representative_prefix(pfx) :
+                return (pfx[:-1], pfx)            
+        return None
+    
+    def representative_prefix(self, pfx):
+        for s in self.prefixes:
+            if self.rows_agree(s, pfx):
+                return s
+        return pfx
+        
     def closed(self):
         # print("find_stray", self.find_open_prefix() == None)
         return self.find_open_prefix() == None        
@@ -268,11 +283,8 @@ class DFA(object):
             if len(self.states) == 0 :
                 self.states.add(pfx)
                 continue
-            for s in self.states:
-                if obtable.rows_agree(s, pfx) :
-                    #print("agree", s, obtable.row_string(s), pfx, obtable.row_string(pfx))
-                    break
-            else:
+            rpfx = obtable.representative_prefix(pfx)
+            if rpfx not in self.states :
                 self.states.add(pfx)
         for s, a in itertools.product(self.states, self.alphabet) :
             for p in self.states :
@@ -296,9 +308,8 @@ class DFA(object):
             or (pfx := obtable.find_open_prefix()) != None \
             or (unspec := obtable.find_unspecified()) != None :                
                 if  ext != None :
-                    obtable.add_suffix(ext)
-                    print("obtable is not consistent. adding suffix '{}'".format(ext))
-                    print(obtable)
+                    obtable.add_suffix(ext[2])
+                    print("obtable is not consistent between {} and {}. adding suffix '{}'".format(ext[0], ext[1],ext[2]))
                     continue
                 else:
                     print("obtable is consistent.")
@@ -311,16 +322,25 @@ class DFA(object):
                 else:
                     print("obtable is closed.")
                 
-                if ext == None and pfx == None :
-                    self.define_machine(obtable)
-                    print(self)
+                print(obtable)
+                print()
 
+                if ext == None and pfx == None :
+                    if (gap := obtable.find_transition_gap()) == None:
+                        print("Tentative machine: ")
+                        self.define_machine(obtable)
+                        print(self)
+                    else:
+                        print("Table has a transition gap between {} and {}.".format(gap[0], gap[1]))
+                
                 if unspec != None :
                     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
                     ex_count += 1
                     obtable.fill(unspec, xclass)
                     print(obtable)
+                    print()
 
+            print("The target machine to our knowledge:")
             self.define_machine(obtable)
             print(self)
             cxpair = input("eq: is there a counter-example? ") 

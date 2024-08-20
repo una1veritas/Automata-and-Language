@@ -3,7 +3,6 @@ Created on 2024/07/22
 
 @author: sin
 '''
-from http.client import UnimplementedFileMode
 
 class BTreeSet:
     MIN_CHILDREN_COUNT = 2
@@ -27,10 +26,9 @@ class BTreeSet:
     
     class Node:
         def __init__(self, data = None, children = None):
+            self.elements = list()
             if data != None :
-                self.elements = [data]
-            else:
-                self.elements = list()
+                self.elements.append(data)
             if isinstance(children, list) :
                 self.children = list(children)[:len(self.elements)+2]
             else:
@@ -39,7 +37,7 @@ class BTreeSet:
         def __str__(self):
             outstr = "("
             if self.is_leaf() :
-                outstr += ", ".join([str(e) for e in self.elements])
+                outstr += ", ".join(["'"+e+"'" if isinstance(e, str) else str(e) for e in self.elements])
             else:
                 for i in range(self.elementcount()) :
                     outstr += str(self.children[i]) + ", " + str(self.elements[i]) + ", "
@@ -273,6 +271,7 @@ class BTreeSet:
     def add(self, data):
         if self.root == None :
             self.root = BTreeSet.Node(data)
+            print(self.root)
             self.count = self.root.elementcount()
             return
         
