@@ -37,17 +37,17 @@ class ObservationTable(object):
     def __str__(self)->str:
         result =  "ObservationTable(" + "'" + ''.join(sorted(self.alphabet)) + "', \n" 
         ext_suffixes = [sfx for sfx in sorted(self.extensions, key=lambda x: (len(x),x)) if sfx not in self.suffixes] 
-        result += str(self.suffixes) + ",\n"
+        result += str(self.suffixes) + str(ext_suffixes) + ",\n"
         printedpfx = set()
         for pfx in self.prefixes :
             result += " {0:8}| ".format(pfx)
-            result += self.row_string(pfx) + '\n'
+            result += self.extension_string(pfx) + '\n'
             printedpfx.add(pfx)
         result += "--------\n"
         for pfx, a in itertools.product(self.prefixes, self.alphabet) :
             if pfx+a not in self.prefixes :
                 result += " {0:8}| ".format(pfx+a)
-                result += self.row_string(pfx+a) + '\n'
+                result += self.extension_string(pfx+a) + '\n'
             printedpfx.add(pfx+a)
         # result += "========\n"
         # for pfx in self.rows :
@@ -232,7 +232,7 @@ class DFA(object):
         self.current = self.initialState
         
     def __str__(self):
-        maxlen = max([len(s) for s in self.states])
+        maxlen = 0 if len(self.states) == 0 else max([len(s) for s in self.states])
         return "DFA(alphabet = {" + ', '.join(sorted(self.alphabet)) + "}, \n states = {" \
             + ', '.join([ s if len(s) > 0 else "'"+s+"'" for s in sorted(self.states)]) + "}, \n initial = '" + str(self.initialState) + "', \n" \
             + " transition = {\n" + "\n".join(["{0:{wdth}} | {1} | {2}".format(k[0] if len(k[0]) else "''", k[1], self.transfunc[k] if len(self.transfunc[k]) else "''", wdth=maxlen) for k in sorted(self.transfunc.keys())]) \
@@ -264,13 +264,16 @@ class DFA(object):
         self.states.clear()
         self.transfunc.clear()
         self.acceptingStates.clear()
-        rowstrings = dict()
         for pfx in obtable.prefixes :
-            pfxrowstr = obtable.row_string(pfx)
-            if pfxrowstr not in rowstrings :
+            if len(self.states) == 0 :
                 self.states.add(pfx)
-                rowstrings[pfxrowstr] = pfx
-        print(rowstrings)
+                continue
+            for s in self.states:
+                if obtable.rows_agree(s, pfx) :
+                    #print("agree", s, obtable.row_string(s), pfx, obtable.row_string(pfx))
+                    break
+            else:
+                self.states.add(pfx)
         for s, a in itertools.product(self.states, self.alphabet) :
             for p in self.states :
                 if obtable.rows_agree(s+a, p) :
@@ -295,6 +298,7 @@ class DFA(object):
                 if  ext != None :
                     obtable.add_suffix(ext)
                     print("obtable is not consistent. adding suffix '{}'".format(ext))
+                    print(obtable)
                     continue
                 else:
                     print("obtable is consistent.")
@@ -302,6 +306,7 @@ class DFA(object):
                 if pfx != None :
                     obtable.add_prefix(pfx)
                     print("obtable is not closed. adding prefix '{}'".format(pfx) )
+                    print(obtable)
                     continue
                 else:
                     print("obtable is closed.")
@@ -310,11 +315,11 @@ class DFA(object):
                     self.define_machine(obtable)
                     print(self)
 
-                print(obtable)
                 if unspec != None :
                     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
                     ex_count += 1
                     obtable.fill(unspec, xclass)
+                    print(obtable)
 
             self.define_machine(obtable)
             print(self)
