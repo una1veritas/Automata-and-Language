@@ -36,7 +36,7 @@ class ObservationTable(object):
     
     def __str__(self)->str:
         result =  "ObservationTable(" + "'" + ''.join(sorted(self.alphabet)) + "', \n" 
-        result += str(list(self.suffixes)) + ",\n"
+        result += str(list(self.suffixes)) + "," + str([e for e in self.extensions if not e in self.suffixes]) + "\n"
         printedpfx = set()
         for pfx in self.prefixes :
             result += " {0:8}| ".format(pfx)
@@ -109,9 +109,9 @@ class ObservationTable(object):
     def extension_string(self, pfx):
         result = self.row_string(pfx) + " "
         if pfx in self.rows :
-            result += "".join([str(self.rows[pfx].get(s, '.')) for s in sorted(self.extensions -set(self.suffixes), key=lambda x: (len(x), x))])
+            result += "".join([str(self.rows[pfx].get(s, '.')) for s in self.extensions if not s in self.suffixes])
         else:
-            result += ''.join(['.' for i in sorted(self.extensions -set(self.suffixes), key=lambda x: (len(x), x))])    
+            result += ''.join(['.' for i in self.extensions if not i in self.suffixes])    
         return result
 
     def rows_disagree(self, pfx1, pfx2):
@@ -326,12 +326,11 @@ class DFA(object):
                 print()
 
                 if ext == None and pfx == None :
-                    if (gap := obtable.find_transition_gap()) == None:
-                        print("Tentative machine: ")
-                        self.define_machine(obtable)
-                        print(self)
-                    else:
+                    if (gap := obtable.find_transition_gap()) != None:
                         print("Table has a transition gap between {} and {}.".format(gap[0], gap[1]))
+                    print("Tentative machine: ")
+                    self.define_machine(obtable)
+                    print(self)
                 
                 if unspec != None :
                     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
