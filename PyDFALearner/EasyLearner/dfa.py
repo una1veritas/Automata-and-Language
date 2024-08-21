@@ -5,6 +5,7 @@ Created on 2024/06/01
 '''
 import itertools
 from btreeset import BTreeSet
+from pickle import TRUE
 
 class ObservationTable(object):
     EMPTYSTRING = ''
@@ -126,7 +127,17 @@ class ObservationTable(object):
     
     def rows_agree(self, pfx1, pfx2):
         return self.rows_disagree(pfx1, pfx2) == None
-     
+    
+    def rows_identical(self, pfx1, pfx2):
+        for e in self.suffixes :
+            if e not in self.rows[pfx1] or e not in self.rows[pfx2] :
+                break
+            if self.rows[pfx1][e] != self.rows[pfx2][e] :
+                break
+        else:
+            return True
+        return False
+    
     def find_open_prefix(self):
         for p, a in itertools.product(self.prefixes, self.alphabet) :
             t = p + a
@@ -154,15 +165,16 @@ class ObservationTable(object):
                         return (s1,s2,a + ext)
         return None 
     
-    def find_transition_gap(self):
+    def find_transition_gaps(self):
+        ans = set()
         for pfx in self.prefixes:
             if len(pfx) == 0 :
                 continue
             src = self.representative_prefix(pfx[:-1])
             dst = self.representative_prefix(src + pfx[-1:])
             if dst != self.representative_prefix(pfx) :
-                return (pfx[:-1], pfx)            
-        return None
+                ans.add( (pfx[:-1], pfx) )
+        return ans
     
     def representative_prefix(self, pfx):
         for s in self.prefixes:
@@ -279,25 +291,39 @@ class DFA(object):
         self.states.clear()
         self.transfunc.clear()
         self.acceptingStates.clear()
-        for pfx in obtable.prefixes :
-            if len(self.states) == 0 :
-                self.states.add(pfx)
-                continue
-            rpfx = obtable.representative_prefix(pfx)
-            if rpfx not in self.states :
-                self.states.add(pfx)
-        for s, a in itertools.product(self.states, self.alphabet) :
-            for p in self.states :
-                if obtable.rows_agree(s+a, p) :
-                    self.transfunc[(s,a)] = p
+        self.states.update(obtable.prefixes)                
+        
+        for s in self.states:
+            for a in self.alphabet:
+                dst = s+a
+                if s+a not in self.states :
+                    dst = obtable.representative_prefix(dst)
+                self.transfunc[(s,a)] = dst
+        
+        while True:
+            for s1, s2 in itertools.product(self.states, self.states) :
+                if s1 < s2 and obtable.rows_identical(s1, s2) :
+                    pair = (s1, s2)
                     break
             else:
-                raise ValueError("no dest state "+str((s,a)))
+                break
+            self.states.remove(s2)
+            for a in self.alphabet:
+                self.transfunc.pop((s2, a))
+            while True:
+                dststates = set([v for k, v in self.transfunc.items()])
+                unreachables = [s for s in self.states if s not in dststates]
+                if len(unreachables) == 0 :
+                    break
+                for u in unreachables:
+                    self.states.remove(u)
             
         for s in self.states :
             if obtable.EMPTYSTRING in obtable.rows[s] and obtable.rows[s][obtable.EMPTYSTRING] == obtable.EXAMPLE_LABEL :
                 #print("add final ", s)
                 self.acceptingStates.add(s)
+        
+                
         
     def learn_by_mat(self):
         obtable = ObservationTable(self.alphabet)
@@ -322,12 +348,9 @@ class DFA(object):
                 else:
                     print("obtable is closed.")
                 
-                print(obtable)
-                print()
-
                 if ext == None and pfx == None :
-                    if (gap := obtable.find_transition_gap()) != None:
-                        print("Table has a transition gap between {} and {}.".format(gap[0], gap[1]))
+                    if len(gaps := obtable.find_transition_gaps()) != 0:
+                        print("Table has a transition gaps: ", gaps)
                     print("Tentative machine: ")
                     self.define_machine(obtable)
                     print(self)
