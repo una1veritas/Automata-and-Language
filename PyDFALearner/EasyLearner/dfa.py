@@ -5,7 +5,6 @@ Created on 2024/06/01
 '''
 import itertools
 from btreeset import BTreeSet
-from pickle import TRUE
 
 class ObservationTable(object):
     EMPTYSTRING = ''
@@ -41,20 +40,20 @@ class ObservationTable(object):
         printedpfx = set()
         for pfx in self.prefixes :
             result += " {0:8}| ".format(pfx)
-            result += self.extension_string(pfx) + '\n'
+            result += self.row_string_extended(pfx) + '\n'
             printedpfx.add(pfx)
         result += "--------\n"
         for pfx, a in itertools.product(self.prefixes, self.alphabet) :
             if pfx+a not in self.prefixes :
                 result += " {0:8}| ".format(pfx+a)
-                result += self.extension_string(pfx+a) + '\n'
+                result += self.row_string_extended(pfx+a) + '\n'
             printedpfx.add(pfx+a)
         # result += "========\n"
         # for pfx in self.rows :
         #     if pfx in printedpfx :
         #         continue
         #     result += " {0:8}| ".format(pfx)
-        #     result += self.extension_string(pfx) + '\n'
+        #     result += self.row_string_extended(pfx) + '\n'
         result += "])"
         return result
     
@@ -107,7 +106,7 @@ class ObservationTable(object):
         #     return result
         return ''.join([str(self.rows[pfx][s]) if pfx in self.rows and s in self.rows[pfx] else '.' for s in self.suffixes])
 
-    def extension_string(self, pfx):
+    def row_string_extended(self, pfx):
         result = self.row_string(pfx) + " "
         if pfx in self.rows :
             result += "".join([str(self.rows[pfx].get(s, '.')) for s in self.extensions if not s in self.suffixes])
@@ -117,11 +116,9 @@ class ObservationTable(object):
 
     def rows_disagree(self, pfx1, pfx2):
         for e in self.suffixes :
-            if pfx1 not in self.rows or pfx2 not in self.rows :
-                continue
-            if e not in self.rows[pfx1] or e not in self.rows[pfx2] :
-                continue
-            if self.rows[pfx1][e] != self.rows[pfx2][e] :
+            if pfx1 in self.rows and e in self.rows[pfx1] \
+            and pfx2 in self.rows and e in self.rows[pfx2] \
+            and self.rows[pfx1][e] != self.rows[pfx2][e] :
                 return e
         return None 
     
