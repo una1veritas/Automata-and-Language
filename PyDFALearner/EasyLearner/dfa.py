@@ -300,24 +300,20 @@ class DFA(object):
                     dst = obtable.representative_prefix(dst)
                 self.transfunc[(s,a)] = dst
         
+        for s1, s2 in itertools.product(self.states, self.states) :
+            if s1 < s2 and obtable.rows_identical(s1, s2) :
+                for k, v in self.transfunc.items() :
+                    if v == s2 :
+                        self.transfunc[k] = s1
+                self.states.remove(s2)
         while True:
-            for s1, s2 in itertools.product(self.states, self.states) :
-                if s1 < s2 and obtable.rows_identical(s1, s2) :
-                    pair = (s1, s2)
-                    break
-            else:
+            dststates = set([v for k, v in self.transfunc.items()])
+            unreachables = [s for s in self.states if s not in dststates]
+            if len(unreachables) == 0 :
                 break
-            self.states.remove(s2)
-            for a in self.alphabet:
-                self.transfunc.pop((s2, a))
-            while True:
-                dststates = set([v for k, v in self.transfunc.items()])
-                unreachables = [s for s in self.states if s not in dststates]
-                if len(unreachables) == 0 :
-                    break
-                for u in unreachables:
-                    self.states.remove(u)
-            
+            for u in unreachables:
+                self.states.remove(u)
+                    
         for s in self.states :
             if obtable.EMPTYSTRING in obtable.rows[s] and obtable.rows[s][obtable.EMPTYSTRING] == obtable.EXAMPLE_LABEL :
                 #print("add final ", s)
@@ -336,6 +332,7 @@ class DFA(object):
                 if  ext != None :
                     obtable.add_suffix(ext[2])
                     print("obtable is not consistent between {} and {}. adding suffix '{}'".format(ext[0], ext[1],ext[2]))
+                    print(obtable)
                     continue
                 else:
                     print("obtable is consistent.")
