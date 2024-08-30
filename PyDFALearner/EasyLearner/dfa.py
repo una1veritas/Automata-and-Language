@@ -5,6 +5,7 @@ Created on 2024/06/01
 '''
 import itertools
 from btreeset import BTreeSet
+from unionfind import UnionFindSet
 
 class ObservationTable(object):
     EMPTYSTRING = ''
@@ -150,11 +151,8 @@ class ObservationTable(object):
         
     def find_inconsistent_extension(self):
         for s1, s2 in itertools.product(self.prefixes, self.prefixes) :
-            if s1 >= s2:
-                continue
-            #print(s1,s2,self.row_string(s1), self.row_string(s2))
-            if self.rows_agree(s1, s2) :
-               #print("consistency chk:")
+            if s1 < s2 and self.rows_agree(s1, s2):
+                #print("consistency chk:")
                 for a in self.alphabet :
                     #print("{}, {}, +{}; {}/{} -> {},{}".format(s1,s2,a,self.row_string(s1), self.row_string(s2),self.row_string(s1+a), self.row_string(s2+a)))
                     ext = self.rows_disagree(s1+a, s2+a)
@@ -167,16 +165,21 @@ class ObservationTable(object):
         for pfx in self.prefixes:
             if len(pfx) == 0 :
                 continue
-            src = self.representative_prefix(pfx[:-1])
-            dst = self.representative_prefix(src + pfx[-1:])
-            if dst != self.representative_prefix(pfx) :
+            src = self.agreeing_prefix(pfx[:-1])
+            dst = self.agreeing_prefix(src + pfx[-1:])
+            if dst != self.agreeing_prefix(pfx) :
                 ans.add( (pfx[:-1], pfx) )
         return ans
     
-    def representative_prefix(self, pfx):
+    def agreeing_prefix(self, pfx):
+        choice = None
         for s in self.prefixes:
-            if self.rows_agree(s, pfx):
+            if self.rows_identical(s, pfx) :
                 return s
+            if choice == None and self.rows_agree(s, pfx):
+                choice = s # a candidate
+        if choice != None :
+            return choice
         return pfx
         
     def closed(self):
@@ -257,6 +260,7 @@ class DFA(object):
         
     def __str__(self):
         maxlen = 0 if len(self.states) == 0 else max([len(s) for s in self.states])
+        print(self.transfunc)
         return "DFA(alphabet = {" + ', '.join(sorted(self.alphabet)) + "}, \n states = {" \
             + ', '.join([ s if len(s) > 0 else "'"+s+"'" for s in sorted(self.states)]) + "}, \n initial = '" + str(self.initialState) + "', \n" \
             + " transition = {\n" + "\n".join(["{0:{wdth}} | {1} | {2}".format(k[0] if len(k[0]) else "''", k[1], self.transfunc[k] if len(self.transfunc[k]) else "''", wdth=maxlen) for k in sorted(self.transfunc.keys())]) \
@@ -288,34 +292,34 @@ class DFA(object):
         self.states.clear()
         self.transfunc.clear()
         self.acceptingStates.clear()
-        self.states.update(obtable.prefixes)                
-        
+
+        stateset = UnionFindSet(obtable.prefixes)
+        for s1, s2 in itertools.product(stateset, stateset) :
+            if s1 < s2 and obtable.rows_identical(s1, s2) :
+                stateset.mergeinto(s1, s2)
+        self.states.update(stateset)
+
+        print(stateset, self.states)
         for s in self.states:
             for a in self.alphabet:
-                dst = s+a
-                if s+a not in self.states :
-                    dst = obtable.representative_prefix(dst)
+                dst = stateset.find(s+a)
+                if dst is None :
+                    dst = obtable.agreeing_prefix(s+a)
                 self.transfunc[(s,a)] = dst
         
-        for s1, s2 in itertools.product(self.states, self.states) :
-            if s1 < s2 and obtable.rows_identical(s1, s2) :
-                for k, v in self.transfunc.items() :
-                    if v == s2 :
-                        self.transfunc[k] = s1
-                self.states.remove(s2)
-        while True:
-            dststates = set([v for k, v in self.transfunc.items()])
-            unreachables = [s for s in self.states if s not in dststates]
-            if len(unreachables) == 0 :
-                break
-            for u in unreachables:
-                self.states.remove(u)
+        print(self.transfunc)
+        # while True:
+        #     dsts = set([v for k, v in self.transfunc.items()])
+        #     unreachables = [s for s in self.states if s not in dsts]
+        #     if len(unreachables) == 0 :
+        #         break
+        #     for u in unreachables:
+        #         self.states.remove(u)
                     
         for s in self.states :
             if obtable.EMPTYSTRING in obtable.rows[s] and obtable.rows[s][obtable.EMPTYSTRING] == obtable.EXAMPLE_LABEL :
                 #print("add final ", s)
                 self.acceptingStates.add(s)
-        
                 
         
     def learn_by_mat(self):
@@ -325,7 +329,8 @@ class DFA(object):
         while True:
             while (ext := obtable.find_inconsistent_extension()) != None \
             or (pfx := obtable.find_open_prefix()) != None \
-            or (unspec := obtable.find_unspecified()) != None :                
+            or (unspec := obtable.find_unspecified()) != None :
+                
                 if  ext != None :
                     obtable.add_suffix(ext[2])
                     print("obtable is not consistent between {} and {}. adding suffix '{}'".format(ext[0], ext[1],ext[2]))

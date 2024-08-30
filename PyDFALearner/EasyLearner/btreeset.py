@@ -271,7 +271,7 @@ class BTreeSet:
     def add(self, data):
         if self.root == None :
             self.root = BTreeSet.Node(data)
-            print(self.root)
+            #print(self.root)
             self.count = self.root.elementcount()
             return
         
