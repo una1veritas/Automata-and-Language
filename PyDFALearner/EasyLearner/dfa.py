@@ -260,7 +260,7 @@ class DFA(object):
         
     def __str__(self):
         maxlen = 0 if len(self.states) == 0 else max([len(s) for s in self.states])
-        print(self.transfunc)
+        #print(self.transfunc)
         return "DFA(alphabet = {" + ', '.join(sorted(self.alphabet)) + "}, \n states = {" \
             + ', '.join([ s if len(s) > 0 else "'"+s+"'" for s in sorted(self.states)]) + "}, \n initial = '" + str(self.initialState) + "', \n" \
             + " transition = {\n" + "\n".join(["{0:{wdth}} | {1} | {2}".format(k[0] if len(k[0]) else "''", k[1], self.transfunc[k] if len(self.transfunc[k]) else "''", wdth=maxlen) for k in sorted(self.transfunc.keys())]) \
@@ -307,7 +307,9 @@ class DFA(object):
                     dst = obtable.agreeing_prefix(s+a)
                 self.transfunc[(s,a)] = dst
         
-        print(self.transfunc)
+        #print(self.transfunc)
+        if (gaps := obtable.find_transition_gaps()) is not None:
+            print("gaps = ", gaps)
         # while True:
         #     dsts = set([v for k, v in self.transfunc.items()])
         #     unreachables = [s for s in self.states if s not in dsts]
