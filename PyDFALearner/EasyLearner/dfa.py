@@ -160,16 +160,34 @@ class ObservationTable(object):
                         return (s1,s2,a + ext)
         return None 
     
-    def find_transition_gaps(self):
-        ans = set()
-        for pfx in self.prefixes:
+    def find_transition_gap(self):
+        for pfx in self.prefixes :
             if len(pfx) == 0 :
                 continue
-            src = self.agreeing_prefix(pfx[:-1])
-            dst = self.agreeing_prefix(src + pfx[-1:])
-            if dst != self.agreeing_prefix(pfx) :
-                ans.add( (pfx[:-1], pfx) )
-        return ans
+            for src in self.prefixes:
+                if src == pfx[:-1] or self.rows_disagree(src, pfx[:-1]) :
+                    continue
+                dst = self.agreeing_prefix(src + pfx[-1:])
+                if dst == self.agreeing_prefix(pfx) :
+                    break
+            else:
+                return (pfx[:-1], pfx)
+        return None
+    
+    def list_transition_gaps(self):
+        reslist = list()
+        for pfx in self.prefixes :
+            if len(pfx) == 0 :
+                continue
+            for src in self.prefixes:
+                if src == pfx[:-1] or self.rows_disagree(src, pfx[:-1]) :
+                    continue
+                dst = self.agreeing_prefix(src + pfx[-1:])
+                if dst == self.agreeing_prefix(pfx) :
+                    break
+            else:
+                reslist.append(pfx)
+        return reslist
     
     def agreeing_prefix(self, pfx):
         choice = None
@@ -289,35 +307,29 @@ class DFA(object):
         return self.is_accept(self.current)
         
     def define_machine(self, obtable):
+        '''define minimum consistent DFA from completed observation table,
+        define an appropriate, inconsistent DFA from incomplete observation table.'''
+
         self.states.clear()
+        if self.initialState in obtable.prefixes :
+            self.states.add(self.initialState)
+        else:
+            print("error: no initial state in obtable:", obtable.prefixes)
+            return
         self.transfunc.clear()
         self.acceptingStates.clear()
 
-        stateset = UnionFindSet(obtable.prefixes)
-        for s1, s2 in itertools.product(stateset, stateset) :
-            if s1 < s2 and obtable.rows_identical(s1, s2) :
-                stateset.mergeinto(s1, s2)
-        self.states.update(stateset)
-
-        print(stateset, self.states)
-        for s in self.states:
-            for a in self.alphabet:
-                dst = stateset.find(s+a)
-                if dst is None :
-                    dst = obtable.agreeing_prefix(s+a)
-                self.transfunc[(s,a)] = dst
+        if (gaps := obtable.list_transition_gaps()) :
+            print("gaps ", gaps)
         
-        #print(self.transfunc)
-        if (gaps := obtable.find_transition_gaps()) is not None:
-            print("gaps = ", gaps)
-        # while True:
-        #     dsts = set([v for k, v in self.transfunc.items()])
-        #     unreachables = [s for s in self.states if s not in dsts]
-        #     if len(unreachables) == 0 :
-        #         break
-        #     for u in unreachables:
-        #         self.states.remove(u)
-                    
+        for pfx in obtable.prefixes :
+            self.states.add(pfx)
+            for a in self.alphabet :
+                if pfx + a in obtable.prefixes :
+                    self.transfunc[(pfx, a)] = pfx + a
+                else:
+                    self.transfunc[(pfx, a)] = obtable.agreeing_prefix(pfx)
+        
         for s in self.states :
             if obtable.EMPTYSTRING in obtable.rows[s] and obtable.rows[s][obtable.EMPTYSTRING] == obtable.EXAMPLE_LABEL :
                 #print("add final ", s)
@@ -350,8 +362,8 @@ class DFA(object):
                     print("obtable is closed.")
                 
                 if ext == None and pfx == None :
-                    if len(gaps := obtable.find_transition_gaps()) != 0:
-                        print("Table has a transition gaps: ", gaps)
+                    if (gap_pair := obtable.find_transition_gap()) != None :
+                        print("Table has a transition gap: ", gap_pair)
                     print("Tentative machine: ")
                     self.define_machine(obtable)
                     print(self)
