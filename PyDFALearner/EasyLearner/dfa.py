@@ -35,7 +35,7 @@ class ObservationTable(object):
         self.extensions.add(self.EMPTYSTRING)
         self.suffixes.add(self.EMPTYSTRING)
     
-    def __str__(self)->str:
+    def __str__(self) -> str:
         result =  "ObservationTable(" + "'" + ''.join(sorted(self.alphabet)) + "', \n" 
         result += str(list(self.suffixes)) + "," + str([e for e in self.extensions if not e in self.suffixes]) + "\n"
         printedpfx = set()
@@ -321,6 +321,15 @@ class DFA(object):
 
         if (gaps := obtable.list_transition_gaps()) :
             print("gaps ", gaps)
+        
+        rowstrs = set()
+        for p in obtable.prefixes:
+            rowstrs.add( (obtable.row_string(p), p) )
+            for a in obtable.alphabet:
+                rowstrs.add( (obtable.row_string(p+a), p+a) )
+        for e in sorted(rowstrs, key=lambda x: x[0]) :
+            print(e)
+        print()
         
         for pfx in obtable.prefixes :
             self.states.add(pfx)
