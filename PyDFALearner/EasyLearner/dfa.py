@@ -6,6 +6,7 @@ Created on 2024/06/01
 import itertools
 from btreeset import BTreeSet
 from unionfind import UnionFindSet
+from pickle import TRUE
 
 class ObservationTable(object):
     EMPTYSTRING = ''
@@ -115,16 +116,19 @@ class ObservationTable(object):
             result += ''.join(['.' for i in self.extensions if not i in self.suffixes])    
         return result
 
-    def rows_disagree(self, pfx1, pfx2):
-        for e in self.suffixes :
-            if pfx1 in self.rows and e in self.rows[pfx1] \
-            and pfx2 in self.rows and e in self.rows[pfx2] \
-            and self.rows[pfx1][e] != self.rows[pfx2][e] :
-                return e
-        return None 
+    def rows_contradict(self, pfx1, pfx2):
+        return self.find_rows_contradiction(pfx1, pfx2) != None
     
-    def rows_agree(self, pfx1, pfx2):
-        return self.rows_disagree(pfx1, pfx2) == None
+    def find_rows_contradiction(self, pfx1, pfx2):
+        for sfx in self.suffixes :
+            if pfx1 in self.rows and sfx in self.rows[pfx1] \
+            and pfx2 in self.rows and sfx in self.rows[pfx2] \
+            and self.rows[pfx1][sfx] != self.rows[pfx2][sfx] :
+                return sfx
+        return None
+    
+    # def rows_agree(self, pfx1, pfx2):
+    #     return self.rows_disagree(pfx1, pfx2) == None
     
     def rows_identical(self, pfx1, pfx2):
         for e in self.suffixes :
@@ -142,7 +146,7 @@ class ObservationTable(object):
             if t not in self.rows :
                 self.rows[t] = dict()
             for pfx in self.prefixes:
-                if self.rows_agree(pfx, t) :
+                if not self.rows_contradict(pfx, t) :
                     break
             else:
                 print("has no agreeing prefix", pfx, t)
@@ -151,13 +155,12 @@ class ObservationTable(object):
         
     def find_inconsistent_extension(self):
         for s1, s2 in itertools.product(self.prefixes, self.prefixes) :
-            if s1 < s2 and self.rows_agree(s1, s2):
+            if s1 < s2 and not self.rows_contradict(s1, s2):
                 #print("consistency chk:")
                 for a in self.alphabet :
-                    #print("{}, {}, +{}; {}/{} -> {},{}".format(s1,s2,a,self.row_string(s1), self.row_string(s2),self.row_string(s1+a), self.row_string(s2+a)))
-                    ext = self.rows_disagree(s1+a, s2+a)
-                    if ext != None :
-                        return (s1,s2,a + ext)
+                    #print("{}, {}, +{}; {}/{} -> {},{}".format(s1,s2,a,self.row_string(s1), self.row_string(s2),self.row_string(s1+a), self.row_string(s2+a))) 
+                    if (ext := self.find_rows_contradiction(s1+a, s2+a)) != None :
+                        return (s1,s2,a+ext)
         return None 
     
     def find_transition_gap(self):
@@ -165,7 +168,7 @@ class ObservationTable(object):
             if len(pfx) == 0 :
                 continue
             for src in self.prefixes:
-                if src == pfx[:-1] or self.rows_disagree(src, pfx[:-1]) :
+                if src == pfx[:-1] or self.rows_contradict(src, pfx[:-1]) :
                     continue
                 dst = self.agreeing_prefix(src + pfx[-1:])
                 if dst == self.agreeing_prefix(pfx) :
@@ -180,7 +183,7 @@ class ObservationTable(object):
             if len(pfx) == 0 :
                 continue
             for src in self.prefixes:
-                if src == pfx[:-1] or self.rows_disagree(src, pfx[:-1]) :
+                if src == pfx[:-1] or self.rows_contradict(src, pfx[:-1]) :
                     continue
                 dst = self.agreeing_prefix(src + pfx[-1:])
                 if dst == self.agreeing_prefix(pfx) :
@@ -194,7 +197,7 @@ class ObservationTable(object):
         for s in self.prefixes:
             if self.rows_identical(s, pfx) :
                 return s
-            if choice == None and self.rows_agree(s, pfx):
+            if choice == None and not self.rows_contradict(s, pfx):
                 choice = s # a candidate
         if choice != None :
             return choice
@@ -316,28 +319,63 @@ class DFA(object):
         else:
             print("error: no initial state in obtable:", obtable.prefixes)
             return
+        
         self.transfunc.clear()
         self.acceptingStates.clear()
 
-        if (gaps := obtable.list_transition_gaps()) :
-            print("gaps ", gaps)
+        # if (gaps := obtable.list_transition_gaps()) :
+        #     print("obtable has gaps ", gaps)
         
-        rowstrs = set()
-        for p in obtable.prefixes:
-            rowstrs.add( (obtable.row_string(p), p) )
-            for a in obtable.alphabet:
-                rowstrs.add( (obtable.row_string(p+a), p+a) )
-        for e in sorted(rowstrs, key=lambda x: x[0]) :
-            print(e)
-        print()
+        # disting = dict()
+        # for p, q in itertools.product(obtable.rows.keys(), obtable.rows.keys()) :
+        #     if p >= q : continue
+        #     if obtable.rows_contradict(p, q) :
+        #         disting[(p,q)] = True
+        #     else:
+        #         disting[(p,q)] = False
+        # for p in sorted(obtable.rows.keys()) :
+        #     for q in sorted(obtable.rows.keys()):
+        #         if (p, q) not in disting :
+        #             print(' ', end='')
+        #         elif disting[(p,q)] :
+        #             print('x', end='')
+        #         else:
+        #             print('o', end='')
+        #     print()
+        # print()
         
-        for pfx in obtable.prefixes :
-            self.states.add(pfx)
+        # rowstrs = set()
+        # for p in obtable.prefixes:
+        #     rowstrs.add( (obtable.row_string(p), p) )
+        #     for a in obtable.alphabet:
+        #         rowstrs.add( (obtable.row_string(p+a), p+a) )
+        # for e in sorted(rowstrs, key=lambda x: x[0]) :
+        #     print(e)
+        # print()
+        
+        gaps = obtable.list_transition_gaps()
+        print('gaps = ',gaps)
+        fronts = list()
+        fronts.append(self.initialState)
+        while len(fronts) > 0 :
+            # if len(fronts) == 0 : 
+            #     print("empty")
+            # else:
+            #     print("fronts=", fronts)
+            s = fronts.pop()
             for a in self.alphabet :
-                if pfx + a in obtable.prefixes :
-                    self.transfunc[(pfx, a)] = pfx + a
-                else:
-                    self.transfunc[(pfx, a)] = obtable.agreeing_prefix(pfx)
+                dst = s + a
+                for pfx in obtable.prefixes :
+                    if len(pfx) < len(dst) or (len(pfx) == len(dst) and pfx < dst) :
+                        if obtable.rows_identical(dst, pfx) :
+                            dst = pfx
+                            break
+                        elif not obtable.rows_contradict(dst, pfx) :
+                            dst = pfx
+                self.transfunc[(s,a)] = dst
+                if dst not in self.states :
+                    self.states.add(dst)
+                    fronts.append(dst)
         
         for s in self.states :
             if obtable.EMPTYSTRING in obtable.rows[s] and obtable.rows[s][obtable.EMPTYSTRING] == obtable.EXAMPLE_LABEL :
