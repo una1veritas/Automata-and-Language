@@ -9,7 +9,7 @@ from dfa import DFA
 
 if __name__ == '__main__':
     '''有限アルファベットのみを定義'''
-    dfa1 = DFA("ab")
+    dfa1 = DFA(sys.argv[1])
 
     dfa1.learn_by_mat()
     print(dfa1)
