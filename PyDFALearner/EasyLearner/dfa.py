@@ -322,39 +322,7 @@ class DFA(object):
         
         self.transfunc.clear()
         self.acceptingStates.clear()
-
-        # if (gaps := obtable.list_transition_gaps()) :
-        #     print("obtable has gaps ", gaps)
         
-        # disting = dict()
-        # for p, q in itertools.product(obtable.rows.keys(), obtable.rows.keys()) :
-        #     if p >= q : continue
-        #     if obtable.rows_contradict(p, q) :
-        #         disting[(p,q)] = True
-        #     else:
-        #         disting[(p,q)] = False
-        # for p in sorted(obtable.rows.keys()) :
-        #     for q in sorted(obtable.rows.keys()):
-        #         if (p, q) not in disting :
-        #             print(' ', end='')
-        #         elif disting[(p,q)] :
-        #             print('x', end='')
-        #         else:
-        #             print('o', end='')
-        #     print()
-        # print()
-        
-        # rowstrs = set()
-        # for p in obtable.prefixes:
-        #     rowstrs.add( (obtable.row_string(p), p) )
-        #     for a in obtable.alphabet:
-        #         rowstrs.add( (obtable.row_string(p+a), p+a) )
-        # for e in sorted(rowstrs, key=lambda x: x[0]) :
-        #     print(e)
-        # print()
-        
-        gaps = obtable.list_transition_gaps()
-        print('gaps = ',gaps)
         fronts = list()
         fronts.append(self.initialState)
         while len(fronts) > 0 :
@@ -416,7 +384,7 @@ class DFA(object):
                     print(self)
                 
                 if unspec != None :
-                    xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
+                    xclass = input("MQ: Is '{}' 1 or 0 ? ".format(unspec))
                     ex_count += 1
                     obtable.fill(unspec, xclass)
                     print(obtable)
@@ -425,7 +393,7 @@ class DFA(object):
             print("The target machine to our knowledge:")
             self.define_machine(obtable)
             print(self)
-            cxpair = input("eq: is there a counter-example? ") 
+            cxpair = input("EQ: is there a counter-example? ") 
             if not cxpair :
                 break
             else:
@@ -438,8 +406,9 @@ class DFA(object):
             # while (unspec := obtable.find_unspecified()) != None :
             #     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
             #     obtable.fill(unspec, xclass)
-            print(obtable)
-        print("MQ: {}, EQ: {}".format(ex_count, cx_count))
+            print("\n",obtable)
+            
+        print("Total counts of examples are MQ: {}, EQ: {}".format(ex_count, cx_count))
         return 
 
     
