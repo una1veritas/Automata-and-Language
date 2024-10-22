@@ -319,6 +319,7 @@ class DFA(object):
         '''define minimum consistent DFA from completed observation table,
         define an appropriate, inconsistent DFA from incomplete observation table.'''
 
+        ''' define the initial state.'''
         self.states.clear()
         if self.initialState in obtable.prefixes :
             self.states.add(self.initialState)
@@ -329,16 +330,22 @@ class DFA(object):
         self.transfunc.clear()
         self.acceptingStates.clear()
         
+        '''define the transfer function.'''
         renametbl = dict()
         for pfx in obtable.prefixes :
             if pfx in self.states : continue
             for s in self.states:
+                '''skip adding pfx in self.states if the equivalent state is already in self.states.'''
                 if obtable.rows_equivalent(s, pfx) :
                     renametbl[pfx] = s
                     break
             else:
+                '''add pfx if no equivalent states is in self.states.'''
                 self.states.add(pfx)
         
+        '''at this stage, self.states includes:
+        states each of which is the representative of a strictly-equivalent group of states, and
+        states that are not fully specified.'''
         for s in self.states:   
             for a in self.alphabet :
                 d = s + a
@@ -349,8 +356,11 @@ class DFA(object):
                     self.transfunc[(s, a)] = d
                 elif d in obtable.rows:
                     d = obtable.find_incontradict_prefix(d)
+                    '''the shortest and lexicographically-first prefix that is incontradict with d 
+                    is includedin self.states (as the representative of an evivalent-group of states).'''
                     self.transfunc[(s, a)] = d
         
+        '''mark all the accepting states.'''
         for s in self.states :
             if obtable.EMPTYSTRING in obtable.rows[s] and obtable.rows[s][obtable.EMPTYSTRING] == obtable.EXAMPLE_LABEL :
                 #print("add final ", s)
