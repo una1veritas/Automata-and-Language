@@ -127,10 +127,16 @@ class ObservationTable(object):
                 return sfx
         return None
     
+    def find_incontradict_prefix(self, pfx):
+        for p in self.prefixes:
+            if self.find_rows_contradiction(pfx, p) == None :
+                return p
+        return None
+    
     # def rows_agree(self, pfx1, pfx2):
     #     return self.rows_disagree(pfx1, pfx2) == None
     
-    def rows_identical(self, pfx1, pfx2):
+    def rows_equivalent(self, pfx1, pfx2):
         for e in self.suffixes :
             if e not in self.rows[pfx1] or e not in self.rows[pfx2] :
                 break
@@ -195,7 +201,7 @@ class ObservationTable(object):
     def agreeing_prefix(self, pfx):
         choice = None
         for s in self.prefixes:
-            if self.rows_identical(s, pfx) :
+            if self.rows_equivalent(s, pfx) :
                 return s
             if choice == None and not self.rows_contradict(s, pfx):
                 choice = s # a candidate
@@ -323,27 +329,27 @@ class DFA(object):
         self.transfunc.clear()
         self.acceptingStates.clear()
         
-        fronts = list()
-        fronts.append(self.initialState)
-        while len(fronts) > 0 :
-            # if len(fronts) == 0 : 
-            #     print("empty")
-            # else:
-            #     print("fronts=", fronts)
-            s = fronts.pop()
+        renametbl = dict()
+        for pfx in obtable.prefixes :
+            if pfx in self.states : continue
+            for s in self.states:
+                if obtable.rows_equivalent(s, pfx) :
+                    renametbl[pfx] = s
+                    break
+            else:
+                self.states.add(pfx)
+        
+        for s in self.states:   
             for a in self.alphabet :
-                dst = s + a
-                for pfx in obtable.prefixes :
-                    if len(pfx) < len(dst) or (len(pfx) == len(dst) and pfx < dst) :
-                        if obtable.rows_identical(dst, pfx) :
-                            dst = pfx
-                            break
-                        elif not obtable.rows_contradict(dst, pfx) :
-                            dst = pfx
-                self.transfunc[(s,a)] = dst
-                if dst not in self.states :
-                    self.states.add(dst)
-                    fronts.append(dst)
+                d = s + a
+                if d in self.states :
+                    self.transfunc[(s, a)] = d
+                elif d in renametbl :
+                    d = renametbl[s+a]
+                    self.transfunc[(s, a)] = d
+                elif d in obtable.rows:
+                    d = obtable.find_incontradict_prefix(d)
+                    self.transfunc[(s, a)] = d
         
         for s in self.states :
             if obtable.EMPTYSTRING in obtable.rows[s] and obtable.rows[s][obtable.EMPTYSTRING] == obtable.EXAMPLE_LABEL :
