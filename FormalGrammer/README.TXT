@@ -10,3 +10,15 @@ result = ['', 'b', 'aa', 'bb', 'aab', 'aba', 'baa', 'bbb', 'aaaa', 'aabb', 'abab
 左辺が同じ（右辺がことなる）ルールを複数記述することもできる．
 第４引数：　開始記号．
 第５引数：　生成する文字列の長さ上限
+
+
+"SAB" "ab" "S→aAbB,A→|aA,B→|bB" "S" 7
+result = ['ab', 'aab', 'abb', 'aaab', 'aabb', 'abbb', 'aaaab', 'aaabb', 'aabbb', 'abbbb', 'aaaaab', 'aaaabb', 'aaabbb', 'aabbbb', 'abbbbb']
+
+"SAB" "ab" "S→|aAb|bAa|bBb,A→|aAb|bAa|bBb,B→bBa" "S" 7
+result = ['', 'ab', 'ba', 'aabb', 'abab', 'baba', 'bbaa', 'aaabbb', 'aababb', 'ababab', 'abbaab', 'baabba', 'bababa', 'bbabaa', 'bbbaaa']
+
+"SAB" "ab" "S→A|B,A→|aaAa|bBbb,B→|bBbb|aaAa" "S" 7
+result = ['', 'aaa', 'bbb', 'aaaaaa', 'aabbba', 'baaabb', 'bbbbbb']
+
+"SABCD" "ab" "S→|AB|CD,A→a,B→SC,C→b,D→SA" "S" 7

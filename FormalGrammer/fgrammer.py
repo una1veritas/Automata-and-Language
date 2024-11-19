@@ -11,7 +11,10 @@ class FormalGrammer():
         self.prodrules = dict()
         if isinstance(rules,str):
             for each in rules.split(',') :
-                (lhs, rhs) = each.strip().split('->')
+                if '→' in each :
+                    (lhs, rhs) = each.strip().split('→') 
+                else:
+                    (lhs, rhs) = each.strip().split('->') 
                 lhs = lhs.strip()
                 rhs = rhs.strip().split('|')
                 if lhs not in self.prodrules :
@@ -43,7 +46,12 @@ class FormalGrammer():
         derived = list()
         derived.append(self.start)
         result = list()
+        cnt = 0
         while len(derived):
+            if cnt > 100 :
+                break
+            else:
+                cnt += 1
             #print(derived, result)
             t = derived.pop(0)
             if all([ea in self.terminals for ea in t]) or not len(t) <= limit :
