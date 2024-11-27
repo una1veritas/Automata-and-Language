@@ -15,10 +15,10 @@ result = ['', 'b', 'aa', 'bb', 'aab', 'aba', 'baa', 'bbb', 'aaaa', 'aabb', 'abab
 "SAB" "ab" "S→aAbB,A→|aA,B→|bB" "S" 7
 result = ['ab', 'aab', 'abb', 'aaab', 'aabb', 'abbb', 'aaaab', 'aaabb', 'aabbb', 'abbbb', 'aaaaab', 'aaaabb', 'aaabbb', 'aabbbb', 'abbbbb']
 
-"SAB" "ab" "S→|aAb|bAa|bBb,A→|aAb|bAa|bBb,B→bBa" "S" 7
-result = ['', 'ab', 'ba', 'aabb', 'abab', 'baba', 'bbaa', 'aaabbb', 'aababb', 'ababab', 'abbaab', 'baabba', 'bababa', 'bbabaa', 'bbbaaa']
+"SAB" "ab" "S→aAb|bAa|bBb,A→|aAb|bAa,B→bBa" "S" 7
+result = ['ab', 'ba', 'aabb', 'abab', 'baba', 'bbaa', 'aaabbb', 'aababb', 'ababab', 'abbaab', 'baabba', 'bababa', 'bbabaa', 'bbbaaa']
 
 "SAB" "ab" "S→A|B,A→|aaAa|bBbb,B→|bBbb|aaAa" "S" 7
 result = ['', 'aaa', 'bbb', 'aaaaaa', 'aabbba', 'baaabb', 'bbbbbb']
 
-"SABCD" "ab" "S→|AB|CD,A→a,B→SC,C→b,D→SA" "S" 7
+"SABCD" "ab" "S→AB|BA|AC|BD,A→a,B→b,C→SB,D→SA" "S" 7
