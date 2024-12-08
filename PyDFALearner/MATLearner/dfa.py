@@ -308,79 +308,54 @@ class DFA(object):
         return self.is_accept(self.current)
         
     def define_machine(self, obtable):
-        '''define minimum consistent DFA from completed observation table,
-        define an appropriate, inconsistent DFA from incomplete observation table.'''
+        '''基本となる，完成した観察テーブル obtable から自明な有限オートマトンを
+        実際に構築する関数．D. Angluin '87 で照明されている構築方法に沿ってつくる。'''
 
+        '''とりあえず初期化'''
         self.states.clear()
-        if self.initialState in obtable.prefixes :
-            self.states.add(self.initialState)
-        else:
-            print("error: no initial state in obtable:", obtable.prefixes)
-            return
-        
         self.transfunc.clear()
         self.acceptingStates.clear()
 
-        # if (gaps := obtable.list_transition_gaps()) :
-        #     print("obtable has gaps ", gaps)
+        '''状態の集合　を row() 文字列の集合として管理する。
+        Angluin の論文の方法そのままで row() 文字列を状態として
+        扱うための辞書。
+        self.states には、Angluin の論文の方法そのままではなく、
+        row() 文字列が同じになる接頭辞のうち、最も短く辞書式順序となるものを
+        self.states に登録して状態とする。'''     
+        rowstates = dict()
         
-        # disting = dict()
-        # for p, q in itertools.product(obtable.rows.keys(), obtable.rows.keys()) :
-        #     if p >= q : continue
-        #     if obtable.rows_contradict(p, q) :
-        #         disting[(p,q)] = True
-        #     else:
-        #         disting[(p,q)] = False
-        # for p in sorted(obtable.rows.keys()) :
-        #     for q in sorted(obtable.rows.keys()):
-        #         if (p, q) not in disting :
-        #             print(' ', end='')
-        #         elif disting[(p,q)] :
-        #             print('x', end='')
-        #         else:
-        #             print('o', end='')
-        #     print()
-        # print()
+        '''初期状態（空文字列）を登録．'''
+        if obtable.EMPTYSTRING not in obtable.prefixes :
+            raise ValueError("Error: Obtable has no initial state: " + str(obtable))
+        rowstr = obtable.row_string(obtable.EMPTYSTRING)
+        '''空記号列は明らかに最も短い辞書式順序で最初の文字列であるから'''
+        rowstates[rowstr] = self.initialState
+        self.states.add(self.initialState) 
         
-        # rowstrs = set()
-        # for p in obtable.prefixes:
-        #     rowstrs.add( (obtable.row_string(p), p) )
-        #     for a in obtable.alphabet:
-        #         rowstrs.add( (obtable.row_string(p+a), p+a) )
-        # for e in sorted(rowstrs, key=lambda x: x[0]) :
-        #     print(e)
-        # print()
+        ''' 状態の同値類（row string が同じ状態の集合）の代表元を引く辞書 '''
+        for pfx in obtable.prefixes :
+            rowstr = obtable.row_string(pfx)
+            if '*' in rowstr :
+                ''' * があったら obtable に未定義箇所がのこっているのでエラー '''
+                raise ValueError('Error: Observation table has undetermined cell. ' + pfx + ', ' + rowstr) 
+            
+            ''' row() 文字列を状態として追加し、接頭辞を同値類の代表元とする '''
+            if rowstr in rowstates :
+                if pfx < rowstates[rowstr] :
+                    rowstates[rowstr] = pfx
+                continue
+            rowstates[rowstr] = pfx
         
-        gaps = obtable.list_transition_gaps()
-        print('gaps = ',gaps)
-        fronts = list()
-        fronts.append(self.initialState)
-        while len(fronts) > 0 :
-            # if len(fronts) == 0 : 
-            #     print("empty")
-            # else:
-            #     print("fronts=", fronts)
-            s = fronts.pop()
+        for rowstate, pfx in rowstates.items() :
+            self.states.add(pfx)
+            if obtable.row(pfx)[obtable.EMPTYSTRING] == 1 :
+                self.acceptingStates.add(pfx)
             for a in self.alphabet :
-                dst = s + a
-                for pfx in obtable.prefixes :
-                    if len(pfx) < len(dst) or (len(pfx) == len(dst) and pfx < dst) :
-                        if obtable.rows_identical(dst, pfx) :
-                            dst = pfx
-                            break
-                        elif not obtable.rows_contradict(dst, pfx) :
-                            dst = pfx
-                self.transfunc[(s,a)] = dst
-                if dst not in self.states :
-                    self.states.add(dst)
-                    fronts.append(dst)
-        
-        for s in self.states :
-            if obtable.EMPTYSTRING in obtable.rows[s] and obtable.rows[s][obtable.EMPTYSTRING] == obtable.EXAMPLE_LABEL :
-                #print("add final ", s)
-                self.acceptingStates.add(s)
-                
-        
+                self.transfunc[(pfx, a)] = rowstates[obtable.row_string(pfx+a)]
+            
+        ''' 遷移関数を定義 '''
+        return 
+    
     def learn_by_mat(self):
         obtable = ObservationTable(self.alphabet)
         cx_count = 0
