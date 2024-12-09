@@ -341,11 +341,13 @@ class DFA(object):
             
             ''' row() 文字列を状態として追加し、接頭辞を同値類の代表元とする '''
             if rowstr in rowstates :
-                if pfx < rowstates[rowstr] :
+                if len(pfx) < len(rowstates[rowstr]) or pfx < rowstates[rowstr] :
                     rowstates[rowstr] = pfx
                 continue
             rowstates[rowstr] = pfx
         
+        '''状態として row() 文字列から対応する接頭辞（最も短く先のもの）を
+        とりだし、遷移先を定義する。DFA クラスの状態を接頭辞としているため。'''
         for rowstate, pfx in rowstates.items() :
             self.states.add(pfx)
             if obtable.row(pfx)[obtable.EMPTYSTRING] == 1 :
