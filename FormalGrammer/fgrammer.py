@@ -54,13 +54,12 @@ class FormalGrammer():
         derived = list()
         derived.append(self.start)
         result = list()
-        cnt = 0
-        while len(derived):
-            if cnt > 100 :
-                break
-            else:
-                cnt += 1
-            #print(derived, result)
+#       cnt = 0
+        while len(derived) > 0:
+#            if cnt > 100 :
+#                break
+#            else:
+#                cnt += 1
             t = derived.pop(0)
             if self.fromed_from_terminals(t) :
                 result.append(t)
@@ -73,7 +72,7 @@ class FormalGrammer():
                     if t[i] not in NTs :
                         NTs[t[i]] = list()
                     NTs[t[i]].append(i)
-            print(t, NTs)
+            #print(t, NTs)
             ''' 出現する非終端記号ごとにすべての可能なルール適用パターンを枚挙した代入を適用 '''
             for nt in NTs:
                 for tup in itertools.product(self.prodrules[nt], repeat=len(NTs[nt])) :
@@ -86,16 +85,16 @@ class FormalGrammer():
                     res += elems[-1]
                     if len(res) <= limit :
                         expanded.append(res)
+            #print("extended = ",expanded)
             derived.extend(expanded)
-            print(derived, result)
+            #print(result, derived)
         result = list(set(result))
-        result = sorted(result)
         result = sorted(result, key = lambda x: len(x))
         return result
 
 if __name__ == '__main__':
     import sys
-    print(sys.argv)
+    #print(sys.argv)
     g = FormalGrammer(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4])
     print('G='+str(g))
-    print("result = "+str(g.generate(int(sys.argv[5]))))
+    print("The final result = "+str(g.generate(int(sys.argv[5]))))
