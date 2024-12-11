@@ -62,7 +62,7 @@ class FormalGrammer():
                 cnt += 1
             #print(derived, result)
             t = derived.pop(0)
-            if self.fromed_from_terminals(t) or not len(t) <= limit :
+            if self.fromed_from_terminals(t) :
                 result.append(t)
                 continue
             expanded = list()
@@ -79,15 +79,13 @@ class FormalGrammer():
                 for tup in itertools.product(self.prodrules[nt], repeat=len(NTs[nt])) :
                     '''「同時に代入」をどう実現するか。
                     まず t を NTs[nt] の各要素で区切るか。。'''
-                    print(nt, "->", t.split(nt))
-            print()
-            for i in range(len(t)):
-                s = t[i]
-                if s in self.prodrules:
-                    for each in self.prodrules[s]:
-                        r = t[:i]+each+t[i+1:]
-                        if len(r) <= limit :
-                            expanded.append(r)
+                    elems = t.split(nt)
+                    res = ''
+                    for i in range(len(tup)) :
+                        res += elems[i] + tup[i]
+                    res += elems[-1]
+                    if len(res) <= limit :
+                        expanded.append(res)
             derived.extend(expanded)
             print(derived, result)
         result = list(set(result))
