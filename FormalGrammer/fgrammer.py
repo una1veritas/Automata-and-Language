@@ -4,6 +4,8 @@ Created on 2021/11/05
 @author: Sin Shimozono
 '''
 
+import itertools
+
 class FormalGrammer():
     def __init__(self, nonterminals,terminals,rules,start):
         self.nonterminals = set(nonterminals)
@@ -42,6 +44,12 @@ class FormalGrammer():
         tmp = 'FormalGrammer({}, {}, {}, {})'.format(nonterminalsstr,alphabetstr,rulesstr,self.start)
         return tmp
     
+    def fromed_from_terminals(self, seq):
+        for c in seq :
+            if c not in self.terminals :
+                return False
+        return True 
+        
     def generate(self, limit=10):
         derived = list()
         derived.append(self.start)
@@ -54,10 +62,25 @@ class FormalGrammer():
                 cnt += 1
             #print(derived, result)
             t = derived.pop(0)
-            if all([ea in self.terminals for ea in t]) or not len(t) <= limit :
+            if self.fromed_from_terminals(t) or not len(t) <= limit :
                 result.append(t)
                 continue
             expanded = list()
+            ''' t 中の非終端記号の出現位置を記号毎にすべて確認 '''
+            NTs = dict()
+            for i in range(len(t)) :
+                if t[i] in self.nonterminals :
+                    if t[i] not in NTs :
+                        NTs[t[i]] = list()
+                    NTs[t[i]].append(i)
+            print(t, NTs)
+            ''' 出現する非終端記号ごとにすべての可能なルール適用パターンを枚挙した代入を適用 '''
+            for nt in NTs:
+                for tup in itertools.product(self.prodrules[nt], repeat=len(NTs[nt])) :
+                    '''「同時に代入」をどう実現するか。
+                    まず t を NTs[nt] の各要素で区切るか。。'''
+                    print(nt, "->", t.split(nt))
+            print()
             for i in range(len(t)):
                 s = t[i]
                 if s in self.prodrules:
@@ -65,8 +88,8 @@ class FormalGrammer():
                         r = t[:i]+each+t[i+1:]
                         if len(r) <= limit :
                             expanded.append(r)
-            print(expanded)
             derived.extend(expanded)
+            print(derived, result)
         result = list(set(result))
         result = sorted(result)
         result = sorted(result, key = lambda x: len(x))
@@ -74,6 +97,7 @@ class FormalGrammer():
 
 if __name__ == '__main__':
     import sys
+    print(sys.argv)
     g = FormalGrammer(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4])
     print('G='+str(g))
     print("result = "+str(g.generate(int(sys.argv[5]))))
