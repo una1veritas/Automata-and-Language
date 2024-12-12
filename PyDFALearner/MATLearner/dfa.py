@@ -335,8 +335,8 @@ class DFA(object):
         ''' 状態の同値類（row string が同じ状態の集合）の代表元を引く辞書 '''
         for pfx in obtable.prefixes :
             rowstr = obtable.row_string(pfx)
-            if '*' in rowstr :
-                ''' * があったら obtable に未定義箇所がのこっているのでエラー '''
+            if '.' in rowstr :
+                ''' . があったら obtable に未定義箇所がのこっているのでエラー '''
                 raise ValueError('Error: Observation table has undetermined cell. ' + pfx + ', ' + rowstr) 
             
             ''' row() 文字列を状態として追加し、接頭辞を同値類の代表元とする '''
@@ -356,6 +356,65 @@ class DFA(object):
                 self.transfunc[(pfx, a)] = rowstates[obtable.row_string(pfx+a)]
             
         ''' 遷移関数を定義 '''
+        return 
+    
+    def define_machine_naive(self, obtable):
+        '''基本となる，完成した観察テーブル obtable から自明な有限オートマトンを
+        実際に構築する関数．D. Angluin '87 で照明されている構築方法に沿ってつくる。'''
+
+        '''とりあえず初期化'''
+        self.states.clear()
+        self.transfunc.clear()
+        self.acceptingStates.clear()
+
+        '''状態の集合　を row() 文字列の集合として管理する。
+        Angluin の論文の方法そのままで row() 文字列を状態として
+        扱うための辞書。
+        self.states には、Angluin の論文の方法そのままではなく、
+        row() 文字列が同じになる接頭辞のうち、最も短く辞書式順序となるものを
+        self.states に登録して状態とする。'''     
+        rowstates = dict()
+        
+        '''初期状態（空文字列）を登録．'''
+        if obtable.EMPTYSTRING not in obtable.prefixes :
+            raise ValueError("Error: Obtable has no initial state: " + str(obtable))
+        rowstr = obtable.row_string(obtable.EMPTYSTRING)
+        '''空記号列は明らかに最も短い辞書式順序で最初の文字列であるから'''
+        rowstates[rowstr] = self.initialState
+        self.states.add(self.initialState) 
+        
+        ''' 状態の同値類（row string が同じ状態の集合）の代表元を引く辞書 '''
+        for pfx in obtable.prefixes :
+            rowstr = obtable.row_string(pfx)
+            if '.' in rowstr :
+                ''' . があったら obtable に未定義箇所がのこっているので他の状態と一切同一視しない '''
+                self.states.add(pfx)
+                continue            
+            ''' row() 文字列を状態として追加し、最短、辞書式順序で最初の接頭辞を同値類の代表元とする '''
+            if rowstr in rowstates :
+                if len(pfx) < len(rowstates[rowstr]) or pfx < rowstates[rowstr] :
+                    rowstates[rowstr] = pfx
+                continue
+            rowstates[rowstr] = pfx
+        
+        for pfx in self.states:
+            if obtable.row(pfx)[obtable.EMPTYSTRING] == 1 :
+                self.acceptingStates.add(pfx)
+                ''' 遷移関数を定義 '''
+            for a in self.alphabet :
+                if pfx+a in self.states :
+                    self.transfunc[(pfx, a)] = pfx + a
+                else:
+                    self.transfunc[(pfx, a)] = rowstates[obtable.row_string(pfx+a)]
+        '''状態として row() 文字列から対応する接頭辞（最も短く先のもの）を
+        とりだし、遷移先を定義する。DFA クラスの状態を接頭辞としているため。'''
+        for rowstate, pfx in rowstates.items() :
+            self.states.add(pfx)
+            if obtable.row(pfx)[obtable.EMPTYSTRING] == 1 :
+                self.acceptingStates.add(pfx)        
+                ''' 遷移関数を定義 '''
+            for a in self.alphabet :
+                self.transfunc[(pfx, a)] = rowstates[obtable.row_string(pfx+a)]
         return 
     
     def learn_by_mat(self):
@@ -388,10 +447,12 @@ class DFA(object):
                     ex_count += 1
                     obtable.fill(unspec, xclass)
                     print(obtable)
+                    self.define_machine_naive(obtable)
+                    print(self)
                     continue
 
             print("The target machine to our knowledge:")
-            self.define_machine(obtable)
+            self.define_machine_naive(obtable)
             print(self)
             cxpair = input("eq: is there a counter-example? ") 
             if not cxpair :

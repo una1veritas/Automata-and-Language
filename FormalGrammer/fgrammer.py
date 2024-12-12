@@ -84,10 +84,13 @@ class FormalGrammer():
                         res += elems[i] + tup[i]
                     res += elems[-1]
                     if len(res) <= limit :
-                        expanded.append(res)
+                        if self.fromed_from_terminals(res) :
+                            result.append(res)
+                        else:
+                            expanded.append(res)
             #print("extended = ",expanded)
             derived.extend(expanded)
-            #print(result, derived)
+            print(derived)
         result = list(set(result))
         result = sorted(result, key = lambda x: len(x))
         return result
