@@ -22,3 +22,7 @@ result = ['ab', 'ba', 'aabb', 'abab', 'baba', 'bbaa', 'aaabbb', 'aababb', 'ababa
 result = ['', 'aaa', 'bbb', 'aaaaaa', 'aabbba', 'baaabb', 'bbbbbb']
 
 "SABCD" "ab" "S→AB|BA|AC|BD,A→a,B→b,C→SB,D→SA" "S" 7
+result = ['ab', 'ba', 'abab', 'aabb', 'bbaa', 'baba', 'bbabaa', 'baabba', 'bababa', 'aababb', 'abbaab', 'aaabbb', 'ababab', 'bbbaaa']
+
+"SABCD" "ab" "S->AB|AC|BD|BC, A->a, B->b, C->SB, D->SB" "S" 6
+result = ['ab', 'babb', 'aabb', 'aaabbb', 'baabbb', 'bbabbb', 'ababbb']
