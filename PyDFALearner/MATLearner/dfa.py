@@ -359,62 +359,53 @@ class DFA(object):
         return 
     
     def define_machine_naive(self, obtable):
-        '''基本となる，完成した観察テーブル obtable から自明な有限オートマトンを
-        実際に構築する関数．D. Angluin '87 で照明されている構築方法に沿ってつくる。'''
-
         '''とりあえず初期化'''
         self.states.clear()
         self.transfunc.clear()
         self.acceptingStates.clear()
-
-        '''状態の集合　を row() 文字列の集合として管理する。
-        Angluin の論文の方法そのままで row() 文字列を状態として
-        扱うための辞書。
-        self.states には、Angluin の論文の方法そのままではなく、
-        row() 文字列が同じになる接頭辞のうち、最も短く辞書式順序となるものを
-        self.states に登録して状態とする。'''     
-        rowstates = dict()
         
         '''初期状態（空文字列）を登録．'''
         if obtable.EMPTYSTRING not in obtable.prefixes :
-            raise ValueError("Error: Obtable has no initial state: " + str(obtable))
-        rowstr = obtable.row_string(obtable.EMPTYSTRING)
+            raise ValueError("Error: Obtable has no initial empty-string prefix: " + str(obtable))
         '''空記号列は明らかに最も短い辞書式順序で最初の文字列であるから'''
-        rowstates[rowstr] = self.initialState
         self.states.add(self.initialState) 
         
-        ''' 状態の同値類（row string が同じ状態の集合）の代表元を引く辞書 '''
+        reprdict = dict()        
         for pfx in obtable.prefixes :
-            rowstr = obtable.row_string(pfx)
-            if '.' in rowstr :
-                ''' . があったら obtable に未定義箇所がのこっているので他の状態と一切同一視しない '''
-                self.states.add(pfx)
-                continue            
-            ''' row() 文字列を状態として追加し、最短、辞書式順序で最初の接頭辞を同値類の代表元とする '''
-            if rowstr in rowstates :
-                if len(pfx) < len(rowstates[rowstr]) or pfx < rowstates[rowstr] :
-                    rowstates[rowstr] = pfx
-                continue
-            rowstates[rowstr] = pfx
-        
-        for pfx in self.states:
-            if obtable.row(pfx)[obtable.EMPTYSTRING] == 1 :
-                self.acceptingStates.add(pfx)
-                ''' 遷移関数を定義 '''
-            for a in self.alphabet :
-                if pfx+a in self.states :
-                    self.transfunc[(pfx, a)] = pfx + a
-                else:
-                    self.transfunc[(pfx, a)] = rowstates[obtable.row_string(pfx+a)]
-        '''状態として row() 文字列から対応する接頭辞（最も短く先のもの）を
-        とりだし、遷移先を定義する。DFA クラスの状態を接頭辞としているため。'''
-        for rowstate, pfx in rowstates.items() :
+            if pfx not in self.states : 
+                if '.' in obtable.row_string(pfx) :
+                    '''行文字列が不完全な接頭辞は他の接頭辞と同一視せず状態に追加'''
+                    self.states.add(pfx)
+                    reprdict[pfx] = pfx
+                    continue
+            '''同一視できる状態を探す'''
+            for s in self.states:
+                if obtable.rows_identical(pfx, s) :
+                    '''すでに同一視できる状態が self.states にある'''
+                    reprdict[pfx] = s
+                    continue
+            '''pfx は長さの昇順、同じ長さなら辞書式順序で枚挙されるので、同一視できる
+            状態の中の代表元として使用、状態の集合に追加する'''
             self.states.add(pfx)
-            if obtable.row(pfx)[obtable.EMPTYSTRING] == 1 :
-                self.acceptingStates.add(pfx)        
-                ''' 遷移関数を定義 '''
-            for a in self.alphabet :
-                self.transfunc[(pfx, a)] = rowstates[obtable.row_string(pfx+a)]
+        
+        print(self.states, reprdict)
+        '''遷移関数を定義'''
+        for s in self.states:
+            print("s = ", s)
+            if obtable.EMPTYSTRING in obtable.row(s) and obtable.row(s)[obtable.EMPTYSTRING] == 1 :
+                self.acceptingStates.add(s)
+            for a in self.alphabet:
+                if s+a in self.states:
+                    self.transfunc[(s, a)] = s+a
+                elif s+a in reprdict :
+                    '''同一視する状態が登録済み'''
+                    self.transfunc[(s,a)] = reprdict[s+a]
+                else:
+                    '''obtable が open, s+a が prefixes にない'''
+                    dstpfx = obtable.agreeing_prefix(s+a)
+                    if dstpfx in reprdict :
+                        dstpfx = reprdict[dstpfx]
+                    self.transfunc[(s,a)] = dstpfx
         return 
     
     def learn_by_mat(self):
@@ -426,7 +417,7 @@ class DFA(object):
             or (pfx := obtable.find_open_prefix()) != None \
             or (unspec := obtable.find_unspecified()) != None :
                 
-                if  ext != None :
+                if ext != None :
                     obtable.add_suffix(ext[2])
                     print("obtable is not consistent between {} and {}. adding suffix '{}'".format(ext[0], ext[1],ext[2]))
                     print(obtable)

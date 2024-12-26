@@ -22,7 +22,12 @@ result = ['ab', 'ba', 'aabb', 'abab', 'baba', 'bbaa', 'aaabbb', 'aababb', 'ababa
 result = ['', 'aaa', 'bbb', 'aaaaaa', 'aabbba', 'baaabb', 'bbbbbb']
 
 "SABCD" "ab" "S→AB|BA|AC|BD,A→a,B→b,C→SB,D→SA" "S" 7
-result = ['ab', 'ba', 'abab', 'aabb', 'bbaa', 'baba', 'bbabaa', 'baabba', 'bababa', 'aababb', 'abbaab', 'aaabbb', 'ababab', 'bbbaaa']
 
-"SABCD" "ab" "S->AB|AC|BD|BC, A->a, B->b, C->SB, D->SB" "S" 6
-result = ['ab', 'babb', 'aabb', 'aaabbb', 'baabbb', 'bbabbb', 'ababbb']
+G=FormalGrammer({S, A, B}, {0, 1}, {S->A|B, A->|00A0|1B11, B->|00A0|1B11}, S)
+The final result = ['', '000', '111', '111111', '000000', '100011', '001110']
+
+G=FormalGrammer({S, A, B}, {0, 1}, {S->1A0B, A->|1A, B->|0B}, S)
+The final result = ['10', '110', '100', '1100', '1110', '1000', '10000', '11110', '11000', '11100', '111100', '111110', '110000', '100000', '111000']
+
+G=FormalGrammer({S, A, B}, {0, 1}, {S->0B1|1A1|1B0, A->1A1, B->|0B1|1B0}, S)
+The final result = ['01', '10', '1010', '0101', '1100', '0011', '100110', '110100', '001011', '011001', '111000', '000111', '101010', '010101']
