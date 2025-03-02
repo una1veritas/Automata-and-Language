@@ -10,8 +10,8 @@ from pickle import TRUE
 
 class ObservationTable(object):
     EMPTYSTRING = ''
-    EXAMPLE_LABEL = 1
-    COUNTEREXAMPLE_LABEL = 0
+    LABEL_EXAMPLE = 1
+    LABEL_COUNTER_EXAMPLE = 0
     
     '''空の observation table を作る．有限アルファベットは与える．'''
     def __init__(self, finitealphabet):
@@ -19,7 +19,7 @@ class ObservationTable(object):
         self.rows = dict()
         self.prefixes = BTreeSet(key=lambda x: (len(x), x))
         self.suffixes = BTreeSet(key=lambda x: (len(x), x))
-        self.extensions = BTreeSet(key=lambda x: (len(x), x))
+        self.auxiliary = BTreeSet(key=lambda x: (len(x), x))
         '''
         BTreeSet/OrderedSet   --- 自作の集合．要素がソート済みになっている．
         self.alphabet --- 有限アルファベット．'' から 1 文字拡張する際に既知である必要がある. 
@@ -27,18 +27,18 @@ class ObservationTable(object):
         self.prefixes --- 接頭辞の集合 S. なお S の要素と文字を連結した拡張接頭辞は，
         self.row （の見出し self.row.keys() ）には含まれるが，self.prefixes には含まれない．
         self.suffixes   --- 接尾辞の集合 E.
-        self.extensions --- 接尾辞の集合 E にはふくめないが，ある行についてすでに既知となった
+        self.auxiliary --- 接尾辞の集合 E にはふくめないが，ある行についてすでに既知となった
         （ますが埋まった）接尾辞の集合．self.suffixes には含まれないが，
         self.row[s][x] が登録ずみの文字列 x. Angluin '87 にはないもの．
         '''
         self.prefixes.add(self.EMPTYSTRING)
         self.rows[self.EMPTYSTRING] = dict()
-        self.extensions.add(self.EMPTYSTRING)
+        self.auxiliary.add(self.EMPTYSTRING)
         self.suffixes.add(self.EMPTYSTRING)
     
     def __str__(self) -> str:
         result =  "ObservationTable(" + "'" + ''.join(sorted(self.alphabet)) + "', \n" 
-        result += str(list(self.suffixes)) + "," + str([e for e in self.extensions if not e in self.suffixes]) + "\n"
+        result += str(list(self.suffixes)) + "," + str([e for e in self.auxiliary if not e in self.suffixes]) + "\n"
         printedpfx = set()
         for pfx in self.prefixes :
             result += " {0:8}| ".format(pfx)
@@ -60,11 +60,11 @@ class ObservationTable(object):
         return result
     
     def add_suffix(self, sfx):
-        self.extensions.add(sfx)
+        self.auxiliary.add(sfx)
         self.suffixes.add(sfx)
     
-    def add_extension(self, sfx):
-        self.extensions.add(sfx)
+    def add_auxiliary(self, sfx):
+        self.auxiliary.add(sfx)
     
     def add_prefix(self,pfx):
         self.prefixes.add(pfx)
@@ -83,7 +83,7 @@ class ObservationTable(object):
     
     '''例を使って表の空欄を埋める. '''
     '''addprefixes == True ならば，例から生じる接頭辞すべてを prefixes に登録する'''
-    def fill(self, xstr, xclass, addprefixes=False):
+    def fill_by_example(self, xstr, xclass, addprefixes=False):
         if xclass not in ('+', '-','0', '1', 0, 1) :
             print("label error", xclass)
             return 
@@ -99,7 +99,7 @@ class ObservationTable(object):
             elif pfx not in self.rows:
                 self.add_row(pfx)
                 #print("added to rows", pfx,self.rows.keys())
-            self.add_extension(sfx)
+            self.add_auxiliary(sfx)
             self.rows[pfx][sfx] = xclass
     
     def row_string(self, pfx):
@@ -111,9 +111,9 @@ class ObservationTable(object):
     def row_string_extended(self, pfx):
         result = self.row_string(pfx) + " "
         if pfx in self.rows :
-            result += "".join([str(self.rows[pfx].get(s, '.')) for s in self.extensions if not s in self.suffixes])
+            result += "".join([str(self.rows[pfx].get(s, '.')) for s in self.auxiliary if not s in self.suffixes])
         else:
-            result += ''.join(['.' for i in self.extensions if not i in self.suffixes])    
+            result += ''.join(['.' for i in self.auxiliary if not i in self.suffixes])    
         return result
 
     def rows_contradict(self, pfx1, pfx2):
@@ -146,7 +146,7 @@ class ObservationTable(object):
             return True
         return False
     
-    def find_open_prefix(self):
+    def find_open_end_prefix(self):
         for p, a in itertools.product(self.prefixes, self.alphabet) :
             t = p + a
             if t not in self.rows :
@@ -210,8 +210,8 @@ class ObservationTable(object):
         return pfx
         
     def closed(self):
-        # print("find_stray", self.find_open_prefix() == None)
-        return self.find_open_prefix() == None        
+        # print("find_stray", self.find_open_end_prefix() == None)
+        return self.find_open_end_prefix() == None        
         
     def consistent(self):
         return self.find_inconsistent_extension() == None 
@@ -362,7 +362,7 @@ class DFA(object):
         
         '''mark all the accepting states.'''
         for s in self.states :
-            if obtable.EMPTYSTRING in obtable.rows[s] and obtable.rows[s][obtable.EMPTYSTRING] == obtable.EXAMPLE_LABEL :
+            if obtable.EMPTYSTRING in obtable.rows[s] and obtable.rows[s][obtable.EMPTYSTRING] == obtable.LABEL_EXAMPLE :
                 #print("add final ", s)
                 self.acceptingStates.add(s)
                 
@@ -373,7 +373,7 @@ class DFA(object):
         ex_count = 0
         while True:
             while (ext := obtable.find_inconsistent_extension()) != None \
-            or (pfx := obtable.find_open_prefix()) != None \
+            or (pfx := obtable.find_open_end_prefix()) != None \
             or (unspec := obtable.find_unspecified()) != None :
                 
                 if  ext != None :
@@ -402,7 +402,7 @@ class DFA(object):
                 if unspec != None :
                     xclass = input("MQ: Is '{}' 1 or 0 ? ".format(unspec))
                     ex_count += 1
-                    obtable.fill(unspec, xclass)
+                    obtable.fill_by_example(unspec, xclass)
                     print(obtable)
                     print()
 
@@ -418,10 +418,10 @@ class DFA(object):
                 cxpair.append('0' if self.accept(cxpair[0]) else '1')
             print("counter example: {}, {}".format(cxpair[0],cxpair[1]))
             cx_count += 1
-            obtable.fill(cxpair[0], cxpair[1],addprefixes=True)
+            obtable.fill_by_example(cxpair[0], cxpair[1],addprefixes=True)
             # while (unspec := obtable.find_unspecified()) != None :
             #     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
-            #     obtable.fill(unspec, xclass)
+            #     obtable.fill_by_example(unspec, xclass)
             print("\n",obtable)
             
         print("Total counts of examples are MQ: {}, EQ: {}".format(ex_count, cx_count))
