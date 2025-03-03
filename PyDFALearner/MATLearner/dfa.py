@@ -195,60 +195,7 @@ class ObservationTable(object):
         else:
             return True
         return False
-    # def rows_agree(self, pfx1, pfx2):
-    #     return self.rows_disagree(pfx1, pfx2) == None
     
-    # def rows_identical(self, pfx1, pfx2):
-    #     for e in self.suffixes :
-    #         if e not in self.rows[pfx1] or e not in self.rows[pfx2] :
-    #             break
-    #         if self.rows[pfx1][e] != self.rows[pfx2][e] :
-    #             break
-    #     else:
-    #         return True
-    #     return False
-    #
-
-    # def find_transition_gap(self):
-    #     for pfx in self.prefixes :
-    #         if len(pfx) == 0 :
-    #             continue
-    #         for src in self.prefixes:
-    #             if src == pfx[:-1] or self.rows_contradict(src, pfx[:-1]) :
-    #                 continue
-    #             dst = self.agreeing_prefix(src + pfx[-1:])
-    #             if dst == self.agreeing_prefix(pfx) :
-    #                 break
-    #         else:
-    #             return (pfx[:-1], pfx)
-    #     return None
-    #
-    # def list_transition_gaps(self):
-    #     reslist = list()
-    #     for pfx in self.prefixes :
-    #         if len(pfx) == 0 :
-    #             continue
-    #         for src in self.prefixes:
-    #             if src == pfx[:-1] or self.rows_contradict(src, pfx[:-1]) :
-    #                 continue
-    #             dst = self.agreeing_prefix(src + pfx[-1:])
-    #             if dst == self.agreeing_prefix(pfx) :
-    #                 break
-    #         else:
-    #             reslist.append(pfx)
-    #     return reslist
-    #
-    # def agreeing_prefix(self, pfx):
-    #     choice = None
-    #     for s in self.prefixes:
-    #         if self.rows_identical(s, pfx) :
-    #             return s
-    #         if choice == None and not self.rows_contradict(s, pfx):
-    #             choice = s # a candidate
-    #     if choice != None :
-    #         return choice
-    #     return pfx
-        
     def find_unspecified(self):
         for pfx in sorted( set(list(self.prefixes) 
                                + [px + a for px, a in itertools.product(self.prefixes, self.alphabet)]) \
