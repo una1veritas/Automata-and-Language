@@ -280,9 +280,20 @@ class DFA(object):
         for pfx in obtable.prefixes :
             rowstring = obtable.row_string(pfx)
             #print(pfx, rowstring)
+            '''rowstring が完全な一致をした場合にのみ同一視し continue'''
             if rowstring not in row_dict :
+                '''consistent であることを保証しつつ既存の状態 self.states 
+                に同一視するか，または新規に状態として登録するか'''
+                agreeable_state = None
+                for s in self.states:
+                    if obtable.rows_agreeable(s, pfx) :
+                        agreeable_state = s
+                        break
+                
                 self.states.add(pfx)
                 row_dict[rowstring] = pfx
+            else:
+                continue
         
         #print(f'states = {self.states}, accepting states = {self.acceptingStates}, row_dict = {row_dict}')
         '''　Open end prefix, S.E の要素で S に等価な接頭辞を持たない、テーブルが閉じていない原因になるものへの対応'''
@@ -296,7 +307,7 @@ class DFA(object):
                     agreeable_state = s
                     break
             if agreeable_state != None:
-                '''assume'''
+                '''fill by assumption'''
                 for suf in obtable.suffixes:
                     #print(f'suf = "{suf}"', obtable.row(pfx+a), obtable.row(agreeable_state))
                     if obtable.row(pfx+a).get(suf,obtable.LABEL_UNKNOWN) == obtable.row(agreeable_state).get(suf,obtable.LABEL_UNKNOWN) :
@@ -311,7 +322,7 @@ class DFA(object):
                             obtable.row(agreeable_state)[suf] = obtable.LABEL_ASSUMED_POSITIVE 
                         elif obtable.row(pfx+a)[suf] == obtable.LABEL_NEGATIVE :
                             obtable.row(agreeable_state)[suf] = obtable.LABEL_ASSUMED_NEGATIVE 
-                #print(f'agreeable "{pfx+a}" "{obtable.row_string(pfx+a)}" "{agreeable_state}" "{obtable.row_string(agreeable_state)}"')                
+                print(f'agreeable "{pfx+a}" "{obtable.row_string(pfx+a)}" "{agreeable_state}" "{obtable.row_string(agreeable_state)}"')                
             else:
                 self.states.add(pfx+a)
                 row_dict[obtable.row_string(pfx+a)] = pfx+a
