@@ -83,7 +83,7 @@ class ObservationTable(object):
     
     '''例を使って表の空欄を埋める. '''
     '''addprefixes == True ならば，例から生じる接頭辞すべてを prefixes に登録する'''
-    def fill_by_example(self, xstr, xclass, addprefixes=False):
+    def fill_by_membership(self, xstr, xclass, addprefixes=False):
         if xclass not in ('+', '-','0', '1', 0, 1) :
             print("label error", xclass)
             return 
@@ -402,7 +402,7 @@ class DFA(object):
                 if unspec != None :
                     xclass = input("MQ: Is '{}' 1 or 0 ? ".format(unspec))
                     ex_count += 1
-                    obtable.fill_by_example(unspec, xclass)
+                    obtable.fill_by_membership(unspec, xclass)
                     print(obtable)
                     print()
 
@@ -418,10 +418,10 @@ class DFA(object):
                 cxpair.append('0' if self.accept(cxpair[0]) else '1')
             print("counter example: {}, {}".format(cxpair[0],cxpair[1]))
             cx_count += 1
-            obtable.fill_by_example(cxpair[0], cxpair[1],addprefixes=True)
+            obtable.fill_by_membership(cxpair[0], cxpair[1],addprefixes=True)
             # while (unspec := obtable.find_unspecified()) != None :
             #     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
-            #     obtable.fill_by_example(unspec, xclass)
+            #     obtable.fill_by_membership(unspec, xclass)
             print("\n",obtable)
             
         print("Total counts of examples are MQ: {}, EQ: {}".format(ex_count, cx_count))

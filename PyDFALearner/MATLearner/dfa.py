@@ -86,7 +86,7 @@ class ObservationTable(object):
             self.rows[pfx] = dict()
     
     def add_row(self,pfx):
-        self.reset_assumptions()
+        #self.reset_assumptions()
         if pfx not in self.rows :
             self.rows[pfx] = dict()
     
@@ -101,7 +101,7 @@ class ObservationTable(object):
                         
     '''例を使って表の空欄を埋める. '''
     '''addprefixes == True ならば，例から生じる接頭辞すべてを prefixes に登録する'''
-    def fill_by_example(self, an_example : tuple, add_prefixes = False):
+    def fill_by_membership(self, an_example : tuple, add_prefixes = False):
         exstr, exclass = an_example
         if exclass not in (self.LABEL_POSITIVE, self.LABEL_NEGATIVE) :
             print(f"label error. reject given example {exstr}, {exclass}.")
@@ -161,6 +161,8 @@ class ObservationTable(object):
     def rows_contradict(self, pfx1, pfx2):
         return self.find_rows_contradiction(pfx1, pfx2) != None
     
+    '''returns a suffix with which transitions from the given prefixes 
+    reach to both accepting and non-accepting states (prefixes).'''
     def find_rows_contradiction(self, pfx1, pfx2):
         for sfx in self.suffixes :
             if pfx1 in self.rows and sfx in self.rows[pfx1] \
@@ -172,12 +174,12 @@ class ObservationTable(object):
     def labels_contradict(self, label1, label2):
         if label1 == self.LABEL_UNKNOWN or label2 == self.LABEL_UNKNOWN :
             return False
-        if label1 in (self.LABEL_ASSUMED_POSITIVE, self.LABEL_POSITIVE) :
-            if label2 in ( self.LABEL_ASSUMED_NEGATIVE, self.LABEL_NEGATIVE) :
+        if label1 in (self.LABEL_ASSUMED_POSITIVE, self.LABEL_POSITIVE) \
+        and label2 in ( self.LABEL_ASSUMED_NEGATIVE, self.LABEL_NEGATIVE) :
                 return True
-        else:
-            if label2 in ( self.LABEL_ASSUMED_POSITIVE, self.LABEL_POSITIVE) :
-                return True
+        elif label1 in (self.LABEL_ASSUMED_NEGATIVE, self.LABEL_NEGATIVE) \
+        and label2 in ( self.LABEL_ASSUMED_POSITIVE, self.LABEL_POSITIVE) :
+            return True
         return False
     
     def rows_agreeable(self,pfx1, pfx2):
@@ -376,7 +378,7 @@ class DFA(object):
                 if unspec != None :
                     xclass = input(f"mq unspecified: Is '{unspec}' {obtable.LABEL_POSITIVE} or {obtable.LABEL_NEGATIVE} ? ")
                     ex_count += 1
-                    obtable.fill_by_example( (unspec, xclass) )
+                    obtable.fill_by_membership( (unspec, xclass) )
                     print(obtable)
                     self.define_machine(obtable)
                     print(self)
@@ -395,10 +397,10 @@ class DFA(object):
             print("counter example: {}, {}".format(cxpair[0],cxpair[1]))
             cx_count += 1
             print(cxpair)
-            obtable.fill_by_example(cxpair, add_prefixes=True)
+            obtable.fill_by_membership(cxpair, add_prefixes=True)
             # while (unspec := obtable.find_unspecified()) != None :
             #     xclass = input("mq unspecified: Is '{}' 1 or 0 ? ".format(unspec))
-            #     obtable.fill_by_example(unspec, xclass)
+            #     obtable.fill_by_membership(unspec, xclass)
             print(obtable)
         print("MQ: {}, EQ: {}".format(ex_count, cx_count))
         return 
