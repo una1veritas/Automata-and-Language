@@ -32,7 +32,7 @@ class ObservationTable(object):
         self.suffixes   --- 接尾辞の集合 E.
         self.auxiliary ---  接尾辞の集合 E にはふくめないが，すでに既知となった（ますが埋まった）
                             列の見出しの接尾辞の集合．self.suffixes には含まれないが，
-                            self.row[s][x] が登録ずみの文字列 x. Angluin '87 にはない
+                            self.row[s][x] が登録ずみの文字列 x の集合. Angluin '87 にはない
         '''
         self.prefixes.add(self.EMPTYSTRING)
         self.rows[self.EMPTYSTRING] = dict()
@@ -185,15 +185,8 @@ class ObservationTable(object):
     def rows_agreeable(self,pfx1, pfx2):
         for suf in self.suffixes:
             c1, c2 = self.row(pfx1).get(suf,self.LABEL_UNKNOWN), self.row(pfx2).get(suf,self.LABEL_UNKNOWN)
-            if c1 == c2 or c1 == self.LABEL_UNKNOWN or c2 == self.LABEL_UNKNOWN :
-                continue
-            if c1 in ( self.LABEL_POSITIVE, self.LABEL_ASSUMED_POSITIVE ) \
-            and c2 in ( self.LABEL_POSITIVE, self.LABEL_ASSUMED_POSITIVE ) : 
-                continue
-            if c1 in ( self.LABEL_NEGATIVE, self.LABEL_ASSUMED_NEGATIVE ) \
-            and c2 in ( self.LABEL_NEGATIVE, self.LABEL_ASSUMED_NEGATIVE ) : 
-                continue
-            break
+            if self.labels_contradict(c1, c2) :
+                break
         else:
             return True
         return False
@@ -272,31 +265,35 @@ class DFA(object):
         
         '''初期状態（空文字列）を登録．'''
         if obtable.EMPTYSTRING not in obtable.prefixes :
-            raise ValueError("Error: Obtable has no initial empty-string prefix: " + str(obtable))
+            raise ValueError("Error: Obtable missing the initial empty-string in prefixes: " + str(obtable))
         
         '''空記号列は明らかに最も短い辞書式順序で最初の文字列であるから'''
         self.states.add(self.initialState)
-        '''row_string(接頭辞) から代表元の接頭辞への写像'''
+        '''row_dict は接頭辞の row_string から代表元の接頭辞への写像（逆引き）'''
         row_dict = dict()
         row_dict[obtable.row_string(self.initialState)] = self.initialState
         for pfx in obtable.prefixes :
-            rowstring = obtable.row_string(pfx)
-            #print(pfx, rowstring)
-            '''rowstring が完全な一致をした場合にのみ同一視し continue'''
-            if rowstring not in row_dict :
-                '''consistent であることを保証しつつ既存の状態 self.states 
-                に同一視するか，または新規に状態として登録するか'''
-                agreeable_state = None
-                for s in self.states:
-                    if obtable.rows_agreeable(s, pfx) :
-                        agreeable_state = s
-                        break
-                
-                self.states.add(pfx)
-                row_dict[rowstring] = pfx
-            else:
+            pfx_rowstring = obtable.row_string(pfx)
+            #print(pfx, pfx_rowstring)
+            '''pfx_rowstring が完全に定義され既存の状態の row_string と一致をした場合には, 
+            なんら疑義なく状態を同一視（se;f.states に加えない）'''
+            if all([ (c in (obtable.LABEL_POSITIVE, obtable.LABEL_NEGATIVE)) for c in pfx_rowstring]) and pfx_rowstring in row_dict : 
+                '''strictly equivalent'''
                 continue
-        
+            else:
+                '''assumption を行うが consistent であることを保証'''
+                (1) pfx_rowstring と assumption についても矛盾しない(agreeableな) row_dict の key_pfx を探す．
+                (2) pfx_rowstring を key_pfx と同等にするための assumption (pfx+sfx, class) すべてについて，
+                    （pfx を key_pfx と同等に specific にする）
+                    obtable に存在するすべての pfx+c (c は sfx の接頭辞) + sfx' に class が矛盾しないか確認し，
+                    確認にパスした場合は pfx_rowstring を key_pfx と同等にする assumption をして，
+                    pfx を key_pfx に同一視する（self.states に追加しない）
+                    key_pfx 側にも同じ assumption を適用
+                    '''weakly equivalent (agreeable)'''
+                (3) そうでない場合, assumption を一切せず単に self.states や row_dict に追加
+                    self.states.add(pfx)
+                    row_dict[pfx_rowstring] = pfx
+                        
         #print(f'states = {self.states}, accepting states = {self.acceptingStates}, row_dict = {row_dict}')
         '''　Open end prefix, S.E の要素で S に等価な接頭辞を持たない、テーブルが閉じていない原因になるものへの対応'''
         for pfx, a in itertools.product(obtable.prefixes, self.alphabet) :
