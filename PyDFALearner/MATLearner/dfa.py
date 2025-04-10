@@ -276,12 +276,12 @@ class DFA(object):
             pfx_rowstring = obtable.row_string(pfx)
             #print(pfx, pfx_rowstring)
             '''pfx_rowstring が完全に定義され既存の状態の row_string と一致をした場合には, 
-            なんら疑義なく状態を同一視（se;f.states に加えない）'''
+            なんら疑義なく状態を同一視（self.states に加えない）'''
             if all([ (c in (obtable.LABEL_POSITIVE, obtable.LABEL_NEGATIVE)) for c in pfx_rowstring]) and pfx_rowstring in row_dict : 
                 '''strictly equivalent'''
                 continue
             else:
-                '''assumption を行うが consistent であることを保証'''
+                '''assumption を行うが consistent であることを保証できる同一視を探す'''
                 (1) pfx_rowstring と assumption についても矛盾しない(agreeableな) row_dict の key_pfx を探す．
                 (2) pfx_rowstring を key_pfx と同等にするための assumption (pfx+sfx, class) すべてについて，
                     （pfx を key_pfx と同等に specific にする）
