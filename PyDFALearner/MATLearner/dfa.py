@@ -282,17 +282,22 @@ class DFA(object):
                 continue
             else:
                 '''assumption を行うが consistent であることを保証できる同一視を探す'''
-                (1) pfx_rowstring と assumption についても矛盾しない(agreeableな) row_dict の key_pfx を探す．
-                (2) pfx_rowstring を key_pfx と同等にするための assumption (pfx+sfx, class) すべてについて，
-                    （pfx を key_pfx と同等に specific にする）
-                    obtable に存在するすべての pfx+c (c は sfx の接頭辞) + sfx' に class が矛盾しないか確認し，
-                    確認にパスした場合は pfx_rowstring を key_pfx と同等にする assumption をして，
-                    pfx を key_pfx に同一視する（self.states に追加しない）
-                    key_pfx 側にも同じ assumption を適用
-                    '''weakly equivalent (agreeable)'''
-                (3) そうでない場合, assumption を一切せず単に self.states や row_dict に追加
-                    self.states.add(pfx)
-                    row_dict[pfx_rowstring] = pfx
+                '''(1) pfx_rowstring と assumption についても矛盾しない(agreeableな) row_dict の key_pfx を探す．'''
+                for key_rowstr, key_pfx in row_dict.items():
+                    if obtable.rows_agreeable(pfx, key_pfx) :
+                        print(f'agreeable "{pfx_rowstring}", "{key_rowstr}".')
+                    else:
+                        print(f'not agreeable "{pfx_rowstring}", "{key_rowstr}".')
+                # (2) pfx_rowstring を key_pfx と同等にするための assumption (pfx+sfx, class) すべてについて，
+                #     （pfx を key_pfx と同等に specific にする）
+                #     obtable に存在するすべての pfx+c (c は sfx の接頭辞) + sfx' に class が矛盾しないか確認し，
+                #     確認にパスした場合は pfx_rowstring を key_pfx と同等にする assumption をして，
+                #     pfx を key_pfx に同一視する（self.states に追加しない）
+                #     key_pfx 側にも同じ assumption を適用
+                #     '''weakly equivalent (agreeable)'''
+                # (3) そうでない場合, assumption を一切せず単に self.states や row_dict に追加
+                #     self.states.add(pfx)
+                #     row_dict[pfx_rowstring] = pfx
                         
         #print(f'states = {self.states}, accepting states = {self.acceptingStates}, row_dict = {row_dict}')
         '''　Open end prefix, S.E の要素で S に等価な接頭辞を持たない、テーブルが閉じていない原因になるものへの対応'''
@@ -321,7 +326,7 @@ class DFA(object):
                             obtable.row(agreeable_state)[suf] = obtable.LABEL_ASSUMED_POSITIVE 
                         elif obtable.row(pfx+a)[suf] == obtable.LABEL_NEGATIVE :
                             obtable.row(agreeable_state)[suf] = obtable.LABEL_ASSUMED_NEGATIVE 
-                print(f'agreeable "{pfx+a}" "{obtable.row_string(pfx+a)}" "{agreeable_state}" "{obtable.row_string(agreeable_state)}"')                
+                print(f'closed: agreeable "{pfx+a}" "{obtable.row_string(pfx+a)}" "{agreeable_state}" "{obtable.row_string(agreeable_state)}"')                
             else:
                 self.states.add(pfx+a)
                 row_dict[obtable.row_string(pfx+a)] = pfx+a
@@ -339,7 +344,7 @@ class DFA(object):
                         self.transfunc[(st, a)] = dst
                         break
                 else:
-                    raise ValueError(f'no agreeable states in self.state with transition destination {st+a}.')
+^l
         
         '''受理状態を定義'''
         for st in self.states:
