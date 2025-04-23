@@ -5,8 +5,6 @@ Created on 2024/06/01
 '''
 import itertools
 from btreeset import BTreeSet
-from pickle import TRUE
-from numpy import True_
 
 class ObservationTable(object):
     EMPTYSTRING = ''
@@ -191,6 +189,14 @@ class ObservationTable(object):
             return True
         return False
     
+    def row_is_complete(self, pfx):
+        rowstr = self.row_string(pfx)
+        for e in rowstr:
+            if e == self.LABEL_POSITIVE or e == self.LABEL_NEGATIVE :
+                continue
+            return False
+        return True
+        
     def find_unspecified(self):
         for pfx in sorted( set(list(self.prefixes) 
                                + [px + a for px, a in itertools.product(self.prefixes, self.alphabet)]) \
@@ -277,27 +283,26 @@ class DFA(object):
             #print(pfx, pfx_rowstring)
             '''pfx_rowstring が完全に定義され既存の状態の row_string と一致をした場合には, 
             なんら疑義なく状態を同一視（self.states に加えない）'''
-            if all([ (c in (obtable.LABEL_POSITIVE, obtable.LABEL_NEGATIVE)) for c in pfx_rowstring]) and pfx_rowstring in row_dict : 
-                '''strictly equivalent'''
+            if obtable.row_is_complete(pfx) and pfx_rowstring in row_dict : 
+                '''strictly equivalent state already exists'''
                 continue
-            else:
-                '''assumption を行うが consistent であることを保証できる同一視を探す'''
-                '''(1) pfx_rowstring と assumption についても矛盾しない(agreeableな) row_dict の key_pfx を探す．'''
-                for key_rowstr, key_pfx in row_dict.items():
-                    if obtable.rows_agreeable(pfx, key_pfx) :
-                        print(f'agreeable "{pfx_rowstring}", "{key_rowstr}".')
-                    else:
-                        print(f'not agreeable "{pfx_rowstring}", "{key_rowstr}".')
-                # (2) pfx_rowstring を key_pfx と同等にするための assumption (pfx+sfx, class) すべてについて，
-                #     （pfx を key_pfx と同等に specific にする）
-                #     obtable に存在するすべての pfx+c (c は sfx の接頭辞) + sfx' に class が矛盾しないか確認し，
-                #     確認にパスした場合は pfx_rowstring を key_pfx と同等にする assumption をして，
-                #     pfx を key_pfx に同一視する（self.states に追加しない）
-                #     key_pfx 側にも同じ assumption を適用
-                #     '''weakly equivalent (agreeable)'''
-                # (3) そうでない場合, assumption を一切せず単に self.states や row_dict に追加
-                #     self.states.add(pfx)
-                #     row_dict[pfx_rowstring] = pfx
+            '''assumption を行うが consistent であることを保証できる同一視を探す'''
+            '''(1) pfx_rowstring と assumption についても矛盾しない(agreeableな) row_dict の key_pfx を探す．'''
+            for key_rowstr, key_pfx in row_dict.items():
+                if obtable.rows_agreeable(pfx, key_pfx) :
+                    print(f'agreeable "{pfx_rowstring}", "{key_rowstr}".')
+                else:
+                    print(f'not agreeable "{pfx_rowstring}", "{key_rowstr}".')
+            # (2) pfx_rowstring を key_pfx と同等にするための assumption (pfx+sfx, class) すべてについて，
+            #     （pfx を key_pfx と同等に specific にする）
+            #     obtable に存在するすべての pfx+c (c は sfx の接頭辞) + sfx' に class が矛盾しないか確認し，
+            #     確認にパスした場合は pfx_rowstring を key_pfx と同等にする assumption をして，
+            #     pfx を key_pfx に同一視する（self.states に追加しない）
+            #     key_pfx 側にも同じ assumption を適用
+            #     '''weakly equivalent (agreeable)'''
+            # (3) そうでない場合, assumption を一切せず単に self.states や row_dict に追加
+            #     self.states.add(pfx)
+            #     row_dict[pfx_rowstring] = pfx
                         
         #print(f'states = {self.states}, accepting states = {self.acceptingStates}, row_dict = {row_dict}')
         '''　Open end prefix, S.E の要素で S に等価な接頭辞を持たない、テーブルが閉じていない原因になるものへの対応'''
