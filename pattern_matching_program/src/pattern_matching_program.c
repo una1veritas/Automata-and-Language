@@ -16,16 +16,17 @@ int main(int argc, char * argv[]) {
 		puts("Give me an input string!\n");
 		return -1; // error occurred.
 	}
+	char * p = argv[1];
 
-	if ( getchar() != 'a' )
+	if ( *p++ != 'a' )
 		return -1; // reject
 
 loop_asterisk:
-	if ( getchar() != '.' )
+	if ( *p++ != '.' )
 		goto loop_asterisk;
-	if ( getchar() != 'c' )
+	if ( *p++ != 'c' )
 		goto loop_asterisk;
-	if ( getchar() != (char) 0 )
+	if ( *p++ != (char) 0 )
 		goto loop_asterisk;
 
 	puts("Accept!\n");
