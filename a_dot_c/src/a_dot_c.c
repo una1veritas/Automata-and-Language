@@ -12,23 +12,37 @@
 #include <stdlib.h>
 
 int main(int argc, char * argv[]) {
-	if (argc < 2 ) {
-		puts("Give me an input string!\n");
-		return -1; // error occurred.
-	}
 	char * p = argv[1];
 
-	if ( *p++ != 'a' )
-		return -1; // reject
+	if ( *p == 'a' )
+		goto state_asterisk;
+	puts("reject!");
+	return -1;
 
-loop_asterisk:
-	if ( *p++ != '.' )
-		goto loop_asterisk;
-	if ( *p++ != 'c' )
-		goto loop_asterisk;
-	if ( *p++ != (char) 0 )
-		goto loop_asterisk;
+	state_asterisk:
+	++p;
+	if ( *p == '.' ) {
+		++p;
+		goto state_dot;
+	}
+	if ( *p == (char) 0 ) {
+		puts("reject!");
+		return -1;
+	}
+	goto state_asterisk;
 
-	puts("Accept!\n");
+	state_dot:
+	if ( *p == 'c' )
+		goto state_c;
+	goto state_asterisk;
+
+	state_c:
+	++p;
+	if ( *p == (char) 0 )
+		goto accept;
+	goto state_asterisk;
+
+	accept:
+	puts("accept!\n");
 	return 0; // finished with no errors.
 }
