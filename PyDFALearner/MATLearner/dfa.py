@@ -348,8 +348,6 @@ class DFA(object):
                     if obtable.rows_agreeable(st+a, dst) :
                         self.transfunc[(st, a)] = dst
                         break
-                else:
-^l
         
         '''受理状態を定義'''
         for st in self.states:

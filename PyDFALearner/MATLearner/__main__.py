@@ -9,7 +9,7 @@ from dfa import DFA
 
 if __name__ == '__main__':
     '''有限アルファベットのみを定義'''
-    falphabet = "ab"
+    falphabet = "10"
     if len(sys.argv) >= 2 :
         falphabet = sys.argv[1]
     dfa1 = DFA(falphabet)
