@@ -116,3 +116,7 @@ dmypy.json
 /.settings/
 .cproject
 language.settings.xml
+
+# Macintosh Finder
+.DS_Store
+
